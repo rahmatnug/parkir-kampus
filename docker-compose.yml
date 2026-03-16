@@ -1,0 +1,18 @@
+version: '3.8'
+services:
+  postgres-db:
+    image: postgres:15-alpine
+    container_name: parking_postgres
+    restart: always
+    environment:
+      POSTGRES_USER: root
+      POSTGRES_PASSWORD: secretpassword
+      POSTGRES_DB: parking_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./db-migrations:/docker-entrypoint-initdb.d # Menjalankan DDL otomatis
+
+volumes:
+  pgdata:
