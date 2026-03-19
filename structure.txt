@@ -1,0 +1,239 @@
+Struktur Database PARKIRKAMPUS
+Table: Roles
+Column
+Type
+Constraint
+Description
+id_role
+SMALLSERIAL
+PK
+Role ID
+nama_role
+VARCHAR(30)
+UNIQUE NOT NULL
+Role name (admin/dosen/mahasiswa/tamu)
+prioritas
+SMALLINT
+NOT NULL
+Parking priority level
+Table: Users
+Column
+Type
+Constraint
+Description
+id_user
+BIGSERIAL
+PK
+User ID
+id_role
+SMALLINT
+FK → roles.id_role
+User role
+nama
+VARCHAR(100)
+NOT NULL
+User full name
+email
+VARCHAR(100)
+UNIQUE NOT NULL
+Email address
+password_hash
+TEXT
+NOT NULL
+Encrypted password
+status
+VARCHAR(20)
+ 'active'
+Account status
+created_at
+TIMESTAMP
+CURRENT_TIMESTAMP
+Account creation time
+Table: Kendaraan
+Column
+Type
+Constraint
+Description
+id_kendaraan
+BIGSERIAL
+PK
+Vehicle ID
+id_user
+BIGINT
+FK → users.id_user
+Vehicle owner
+nomor_polisi
+VARCHAR(15)
+UNIQUE NOT NULL
+License plate
+jenis_kendaraan
+VARCHAR(20)
+CHECK ('motor','mobil')
+Vehicle type
+warna
+VARCHAR(30)
+Vehicle color
+created_at
+TIMESTAMP
+DEFAULT CURRENT_TIMESTAMP
+Record creation time
+Table: Zona_Parkir
+Column
+Type
+Constraint
+Description
+id_zona
+SMALLSERIAL
+PK
+Zone ID
+nama_zona
+VARCHAR(50)
+NOT NULL
+Zone name
+deskripsi
+TEXT
+Zone description
+kapasitas
+INTEGER
+NOT NULL
+Maximum capacity
+status
+VARCHAR(20)
+DEFAULT 'active'
+Zone status
+Table: Slot_Parkir
+Column
+Type
+Constraint
+Description
+id_slot
+BIGSERIAL
+PK
+Slot ID
+id_zona
+SMALLINT
+FK → zona_parkir.id_zona
+Zone reference
+nomor_slot
+VARCHAR(20)
+NOT NULL
+Slot number
+status
+VARCHAR(20)
+DEFAULT 'available'
+Slot status
+Table: Parkir_Transaksi
+Column
+Type
+Constraint
+Description
+id_transaksi
+BIGSERIAL
+PK
+Transaction ID
+id_user
+BIGINT
+FK → users.id_user
+User reference
+id_kendaraan
+BIGINT
+FK → kendaraan.id_kendaraan
+Vehicle reference
+id_slot
+BIGINT
+FK → slot_parkir.id_slot
+Slot reference
+waktu_masuk
+TIMESTAMP
+NOT NULL
+Entry time
+waktu_keluar
+TIMESTAMP
+Exit time
+status
+VARCHAR(20)
+DEFAULT 'parkir'
+Parking status
+Table: Waiting_List
+Column
+Type
+Constraint
+Description
+id_waiting
+BIGSERIAL
+PK
+Waiting list ID
+id_user
+BIGINT
+FK → users.id_user
+User reference
+id_zona
+SMALLINT
+FK → zona_parkir.id_zona
+Zone reference
+waktu_permohonan
+TIMESTAMP
+DEFAULT CURRENT_TIMESTAMP
+Request time
+posisi_antrian
+INTEGER
+NOT NULL
+Queue position
+Table: Penalti
+Column
+Type
+Constraint
+Description
+id_penalti
+BIGSERIAL
+PK
+Penalty ID
+id_user
+BIGINT
+FK → users.id_user
+User reference
+jenis_pelanggaran
+VARCHAR(100)
+Violation type
+poin_penalti
+INTEGER
+Penalty points
+tanggal
+TIMESTAMP
+DEFAULT CURRENT_TIMESTAMP
+Violation date
+Table: Blacklist
+Column
+Type
+Constraint
+Description
+id_blacklist
+BIGSERIAL
+PK
+Blacklist ID
+id_user
+BIGINT
+FK → users.id_user
+User reference
+alasan
+TEXT
+Reason for blacklist
+tanggal_mulai
+TIMESTAMP
+Start date
+tanggal_selesai
+TIMESTAMP
+End date
+status
+VARCHAR(20)
+DEFAULT 'active'
+Blacklist status
+Database Relationship Overview
+Roles → Users
+Users → Kendaraan
+Users → Parkir_Transaksi
+Users → Waiting_List
+Users → Penalti
+Users → Blacklist
+Zona_Parkir → Slot_Parkir
+Slot_Parkir → Parkir_Transaksi

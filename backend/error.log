@@ -1,0 +1,17 @@
+2026/03/19 08:33:19 Database connection successful
+2026/03/19 08:33:20 Database migration successful
+[GIN-debug] [WARNING] Creating an Engine instance with the Logger and Recovery middleware already attached.
+2026/03/19 08:33:20 Database seeding successful
+
+2026/03/19 08:33:20 Database initialized
+[GIN-debug] [WARNING] Running in "debug" mode. Switch to "release" mode in production.
+ - using env:	export GIN_MODE=release
+ - using code:	gin.SetMode(gin.ReleaseMode)
+
+[GIN-debug] POST   /api/register             --> github.com/rahmatnug/parkir-kampus-backend/internal/delivery/http.(*UserHandler).Register-fm (4 handlers)
+[GIN-debug] POST   /api/login                --> github.com/rahmatnug/parkir-kampus-backend/internal/delivery/http.(*UserHandler).Login-fm (4 handlers)
+[GIN-debug] GET    /health                   --> main.main.func1 (4 handlers)
+[GIN-debug] [WARNING] You trusted all proxies, this is NOT safe. We recommend you to set a value.
+Please check https://github.com/gin-gonic/gin/blob/master/docs/doc.md#dont-trust-all-proxies for details.
+2026/03/19 08:33:20 Server mapping to port :8080
+[GIN-debug] Listening and serving HTTP on :8080

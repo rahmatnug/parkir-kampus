@@ -1,0 +1,35 @@
+package domain
+
+import "time"
+
+// Role represents the role entity
+type Role struct {
+	ID        uint   `json:"id_role" gorm:"primaryKey;column:id_role;autoIncrement"`
+	NamaRole  string `json:"nama_role" gorm:"unique;not null;column:nama_role;type:varchar(30)"`
+	Prioritas int    `json:"prioritas" gorm:"column:prioritas;not null;type:smallint"`
+}
+
+// User represents the user entity
+type User struct {
+	ID           uint      `json:"id_user" gorm:"primaryKey;column:id_user;autoIncrement"`
+	RoleID       uint      `json:"id_role" gorm:"column:id_role;type:smallint"`
+	Role         Role      `json:"role" gorm:"foreignKey:RoleID;references:ID"`
+	Nama         string    `json:"nama" gorm:"not null;column:nama;type:varchar(100)"`
+	Email        string    `json:"email" gorm:"uniqueIndex;not null;column:email;type:varchar(100)"`
+	PasswordHash string    `json:"-" gorm:"not null;column:password_hash;type:text"`
+	Status       string    `json:"status" gorm:"column:status;type:varchar(20);default:'active'"`
+	CreatedAt    time.Time `json:"created_at" gorm:"column:created_at;autoCreateTime"`
+}
+
+// UserRepository interface defines the methods that any repository must implement
+type UserRepository interface {
+	Create(user *User) error
+	FindByEmail(email string) (*User, error)
+	FindByID(id uint) (*User, error)
+}
+
+// UserUsecase interface defines the standard business logic methods
+type UserUsecase interface {
+	Register(email, password string) (*User, error)
+	Login(email, password string) (string, error)
+}
