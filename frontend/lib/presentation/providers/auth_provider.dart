@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:jwt_decoder/jwt_decoder.dart';
 import '../../data/services/auth_service.dart';
 
 enum AuthStatus { initial, authenticated, unauthenticated, loading }
@@ -8,29 +9,51 @@ class AuthProvider extends ChangeNotifier {
 
   AuthStatus _status = AuthStatus.initial;
   String? _errorMessage;
+  int? _idRole; // 1: Admin, 2: Dosen, 3: Mahasiswa
+  int _penaltyPoints = 0;
+  bool _isBlacklisted = false;
+  String _blacklistReason = "";
 
   AuthStatus get status => _status;
   String? get errorMessage => _errorMessage;
+  int? get idRole => _idRole;
+  int get penaltyPoints => _penaltyPoints;
+  bool get isBlacklisted => _isBlacklisted;
+  String get blacklistReason => _blacklistReason;
   bool get isAuthenticated => _status == AuthStatus.authenticated;
 
-  /// Check saved token on app launch
+  /// Simulasi data user (Bisa diubah untuk testing)
+  void setMockStatus({int penalty = 0, bool blacklisted = false, String reason = ""}) {
+    _penaltyPoints = penalty;
+    _isBlacklisted = blacklisted;
+    _blacklistReason = reason;
+    notifyListeners();
+  }
+
+  /// Check saved token and extract role on app launch
   Future<void> checkAuthStatus() async {
     _status = AuthStatus.loading;
     notifyListeners();
 
-    final auth = await _authService.isAuthenticated();
-    _status = auth ? AuthStatus.authenticated : AuthStatus.unauthenticated;
+    final token = await _authService.getToken();
+    if (token != null && !JwtDecoder.isExpired(token)) {
+      _extractRole(token);
+      _status = AuthStatus.authenticated;
+    } else {
+      _status = AuthStatus.unauthenticated;
+    }
     notifyListeners();
   }
 
-  /// Login with email + password
+  /// Login and extract role from JWT
   Future<bool> login(String email, String password) async {
     _status = AuthStatus.loading;
     _errorMessage = null;
     notifyListeners();
 
     try {
-      await _authService.login(email, password);
+      final token = await _authService.login(email, password);
+      _extractRole(token);
       _status = AuthStatus.authenticated;
       notifyListeners();
       return true;
@@ -42,9 +65,20 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
+  void _extractRole(String token) {
+    try {
+      Map<String, dynamic> decodedToken = JwtDecoder.decode(token);
+      // Asumsi payload JWT memiliki key 'id_role'
+      _idRole = decodedToken['id_role'] ?? decodedToken['role_id']; 
+    } catch (_) {
+      _idRole = null;
+    }
+  }
+
   /// Logout
   Future<void> logout() async {
     await _authService.logout();
+    _idRole = null;
     _status = AuthStatus.unauthenticated;
     notifyListeners();
   }

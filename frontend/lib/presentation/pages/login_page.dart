@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import 'dashboard_page.dart';
+import 'mahasiswa_page.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -49,8 +50,11 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
     if (!mounted) return;
 
     if (success) {
+      final idRole = authProvider.idRole;
+      Widget destination = (idRole == 1) ? const DashboardPage() : const MahasiswaPage();
+
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const DashboardPage()),
+        MaterialPageRoute(builder: (_) => destination),
       );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(

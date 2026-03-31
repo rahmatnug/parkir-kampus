@@ -24,20 +24,15 @@ class AuthService {
           .timeout(const Duration(seconds: 10));
 
       if (response.statusCode == 200) {
-        final data = LoginResponse.fromJson(jsonDecode(response.body));
-        if (data.token.isEmpty) {
+        final data = jsonDecode(response.body);
+        final token = data['token'] ?? '';
+        if (token.isEmpty) {
           throw Exception('Server mengembalikan token kosong');
         }
-        await saveToken(data.token);
-        return data.token;
+        await saveToken(token);
+        return token;
       } else if (response.statusCode == 401) {
-        // Parse error message from server if available
-        String msg = 'Email atau Password Salah';
-        try {
-          final body = jsonDecode(response.body) as Map<String, dynamic>;
-          msg = body['error'] as String? ?? msg;
-        } catch (_) {/* ignore parse errors */}
-        throw Exception(msg);
+        throw Exception("Email atau password salah (Unauthorized 401).");
       } else {
         throw Exception('Server error: ${response.statusCode}');
       }
