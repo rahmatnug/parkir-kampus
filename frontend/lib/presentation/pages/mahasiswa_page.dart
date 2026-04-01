@@ -30,10 +30,7 @@ class MahasiswaPage extends StatelessWidget {
           actions: [
             IconButton(
               icon: const Icon(Icons.logout_rounded, color: Color(0xFF94A3B8)),
-              onPressed: () async {
-                await context.read<AuthProvider>().logout();
-                if (context.mounted) Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => const LoginPage()));
-              },
+              onPressed: () => context.read<AuthProvider>().logout(),
             ),
           ],
           // 2. Penalty Banner (MaterialBanner)
@@ -138,7 +135,7 @@ class _BlacklistView extends StatelessWidget {
               ),
               const SizedBox(height: 40),
               ElevatedButton.icon(
-                onPressed: () => context.read<AuthProvider>().logout().then((_) => Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const LoginPage()))),
+                onPressed: () => context.read<AuthProvider>().logout(),
                 icon: const Icon(Icons.logout),
                 label: const Text("KELUAR APLIKASI"),
                 style: ElevatedButton.styleFrom(backgroundColor: Colors.white12, foregroundColor: Colors.white),

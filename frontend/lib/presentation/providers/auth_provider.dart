@@ -67,10 +67,16 @@ class AuthProvider extends ChangeNotifier {
 
   void _extractRole(String token) {
     try {
+      if (token.isEmpty) {
+        _idRole = null;
+        return;
+      }
       Map<String, dynamic> decodedToken = JwtDecoder.decode(token);
-      // Asumsi payload JWT memiliki key 'id_role'
+      // Mendukung key 'id_role' atau 'role_id'
       _idRole = decodedToken['id_role'] ?? decodedToken['role_id']; 
-    } catch (_) {
+      debugPrint("Token decoded successfully. Role ID: $_idRole");
+    } catch (e) {
+      debugPrint("Error decoding token: $e");
       _idRole = null;
     }
   }

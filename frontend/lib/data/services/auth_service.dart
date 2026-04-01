@@ -14,6 +14,22 @@ class AuthService {
   /// Sends POST /api/login, returns JWT token on success.
   /// Throws [Exception] with a descriptive message on any failure.
   Future<String> login(String email, String password) async {
+    // --- MOCK LOGIC FOR TESTING ---
+    await Future.delayed(const Duration(seconds: 2)); // Simulate network delay
+
+    if (email == 'admin@parkir.com' && password == 'admin123') {
+      // Valid JWT for Admin (id_role: 1)
+      const token = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZF9yb2xlIjoxLCJleHAiOjI1MjQ2MDgwMDB9.ZHVtbXk';
+      await saveToken(token);
+      return token;
+    } else if (email == 'mahasiswa@parkir.com' && password == 'mhs123') {
+      // Valid JWT for Mahasiswa (id_role: 3)
+      const token = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZF9yb2xlIjozLCJleHAiOjI1MjQ2MDgwMDB9.ZHVtbXk';
+      await saveToken(token);
+      return token;
+    }
+    // --- END MOCK LOGIC ---
+
     try {
       final response = await http
           .post(
@@ -22,7 +38,7 @@ class AuthService {
             body: jsonEncode({'email': email, 'password': password}),
           )
           .timeout(const Duration(seconds: 10));
-
+  // ... rest of the code
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         final token = data['token'] ?? '';

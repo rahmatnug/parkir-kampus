@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'presentation/providers/auth_provider.dart';
 import 'presentation/pages/login_page.dart';
 import 'presentation/pages/dashboard_page.dart';
+import 'presentation/pages/mahasiswa_page.dart';
 
 void main() {
   runApp(
@@ -80,7 +81,12 @@ class _AuthGateState extends State<_AuthGate> {
     }
 
     if (status == AuthStatus.authenticated) {
-      return const DashboardPage();
+      final idRole = context.watch<AuthProvider>().idRole;
+      if (idRole == 1) {
+        return const DashboardPage();
+      } else {
+        return const MahasiswaPage();
+      }
     }
 
     return const LoginPage();

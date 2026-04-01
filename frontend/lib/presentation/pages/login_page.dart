@@ -50,12 +50,9 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
     if (!mounted) return;
 
     if (success) {
-      final idRole = authProvider.idRole;
-      Widget destination = (idRole == 1) ? const DashboardPage() : const MahasiswaPage();
-
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => destination),
-      );
+      // Tidak perlu Navigator.pushReplacement lagi, 
+      // karena _AuthGate di main.dart akan otomatis render Dashboard/Mahasiswa 
+      // ketika AuthStatus berubah menjadi authenticated.
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(

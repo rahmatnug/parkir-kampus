@@ -36,10 +36,7 @@ class _DashboardPageState extends State<DashboardPage> {
         actions: [
           IconButton(
             icon: const Icon(Icons.logout_rounded, color: Color(0xFF94A3B8)),
-            onPressed: () async {
-              await context.read<AuthProvider>().logout();
-              if (context.mounted) Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => const LoginPage()));
-            },
+            onPressed: () => context.read<AuthProvider>().logout(),
           ),
         ],
       ),
