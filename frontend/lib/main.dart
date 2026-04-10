@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'presentation/providers/auth_provider.dart';
-import 'presentation/pages/login_page.dart';
+import 'presentation/pages/user_auth_page.dart';
 import 'presentation/pages/dashboard_page.dart';
-import 'presentation/pages/mahasiswa_page.dart';
+import 'presentation/pages/user_home_page.dart';
+import 'package:frontend/presentation/pages/admin_splash_screen.dart';
 
 void main() {
   runApp(
@@ -32,20 +33,22 @@ class ParkirkampusApp extends StatelessWidget {
         useMaterial3: true,
         fontFamily: 'Roboto',
       ),
-      home: const _AuthGate(),
+      // LAYAR PERTAMA SEKARANG ADALAH ADMIN SPLASH SCREEN
+      home: const AdminSplashScreen(),
     );
   }
 }
 
 /// Splash / auth gate widget that checks stored token on first run.
-class _AuthGate extends StatefulWidget {
-  const _AuthGate();
+/// Diubah menjadi public (AuthGate) agar bisa diakses dari SplashScreen
+class AuthGate extends StatefulWidget {
+  const AuthGate({super.key});
 
   @override
-  State<_AuthGate> createState() => _AuthGateState();
+  State<AuthGate> createState() => _AuthGateState();
 }
 
-class _AuthGateState extends State<_AuthGate> {
+class _AuthGateState extends State<AuthGate> {
   @override
   void initState() {
     super.initState();
@@ -60,21 +63,13 @@ class _AuthGateState extends State<_AuthGate> {
     final status = context.watch<AuthProvider>().status;
 
     if (status == AuthStatus.initial || status == AuthStatus.loading) {
-      // Splash screen while checking token
+      // Mini loading screen (hanya muncul sekilas saat token dicek)
       return const Scaffold(
-        backgroundColor: Color(0xFF0F172A),
+        backgroundColor: Color(0xFFF6F6F8), // Disamakan dengan background splash
         body: Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.local_parking_rounded,
-                  color: Color(0xFF6366F1), size: 64),
-              SizedBox(height: 16),
-              CircularProgressIndicator(
-                color: Color(0xFF6366F1),
-                strokeWidth: 2.5,
-              ),
-            ],
+          child: CircularProgressIndicator(
+            color: Colors.blueAccent,
+            strokeWidth: 3,
           ),
         ),
       );
@@ -85,10 +80,10 @@ class _AuthGateState extends State<_AuthGate> {
       if (idRole == 1) {
         return const DashboardPage();
       } else {
-        return const MahasiswaPage();
+        return const UserHomePage();
       }
     }
 
-    return const LoginPage();
+    return const UserAuthPage();
   }
 }

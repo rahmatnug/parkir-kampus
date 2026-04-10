@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"time"
 
 	"github.com/rahmatnug/parkir-kampus-backend/internal/domain"
 	"golang.org/x/crypto/bcrypt"
@@ -89,6 +90,81 @@ func SeedData(db *gorm.DB) {
 	}
 
 	db.Where(domain.User{Email: adminUser.Email}).FirstOrCreate(&adminUser)
+
+	// Seed Dummy Users
+	mahasiswaUser := domain.User{
+		RoleID:       3,
+		Nama:         "Budi Santoso",
+		Email:        "budi@univ.ac.id",
+		PasswordHash: string(hashedPassword),
+		Status:       "active",
+	}
+	db.Where(domain.User{Email: mahasiswaUser.Email}).FirstOrCreate(&mahasiswaUser)
+
+	dosenUser := domain.User{
+		RoleID:       2,
+		Nama:         "Dr. Hendra",
+		Email:        "hendra@univ.ac.id",
+		PasswordHash: string(hashedPassword),
+		Status:       "active",
+	}
+	db.Where(domain.User{Email: dosenUser.Email}).FirstOrCreate(&dosenUser)
+
+	// Seed Zoning
+	zones := []domain.ZonaParkir{
+		{IDZona: 1, NamaZona: "Zone A", Deskripsi: "Parkir Utama Depan", Kapasitas: 50, Status: "active"},
+		{IDZona: 2, NamaZona: "Zone B", Deskripsi: "Parkir Gedung B", Kapasitas: 40, Status: "active"},
+		{IDZona: 3, NamaZona: "Zone C", Deskripsi: "Parkir Belakang", Kapasitas: 30, Status: "active"},
+	}
+	for i, z := range zones {
+		db.Where(domain.ZonaParkir{NamaZona: z.NamaZona}).FirstOrCreate(&zones[i])
+	}
+
+	// Seed Kendaraan
+	k1 := domain.Kendaraan{
+		UserID:         mahasiswaUser.ID,
+		NomorPolisi:    "B 1234 ABC",
+		JenisKendaraan: "motor",
+		Warna:          "Hitam",
+	}
+	db.Where(domain.Kendaraan{NomorPolisi: k1.NomorPolisi}).FirstOrCreate(&k1)
+
+	k2 := domain.Kendaraan{
+		UserID:         dosenUser.ID,
+		NomorPolisi:    "D 8888 XYZ",
+		JenisKendaraan: "mobil",
+		Warna:          "Putih",
+	}
+	db.Where(domain.Kendaraan{NomorPolisi: k2.NomorPolisi}).FirstOrCreate(&k2)
+
+	// Seed Transaksi
+	// Budi is parked
+	var txCount int64
+	db.Model(&domain.Transaksi{}).Count(&txCount)
+	if txCount == 0 {
+		importTime1 := time.Now().Add(-2 * time.Hour)
+		importTime2 := time.Now().Add(-5 * time.Hour)
+		checkoutTime2 := time.Now().Add(-1 * time.Hour)
+
+		db.Create(&domain.Transaksi{
+			UserID:      mahasiswaUser.ID,
+			KendaraanID: k1.IDKendaraan,
+			SlotID:      1, // Dummy slot
+			WaktuMasuk:  importTime1,
+			Status:      "parkir",
+		})
+
+		// Dr. Hendra already completed parking
+		db.Create(&domain.Transaksi{
+			UserID:      dosenUser.ID,
+			KendaraanID: k2.IDKendaraan,
+			SlotID:      1,
+			WaktuMasuk:  importTime2,
+			WaktuKeluar: &checkoutTime2,
+			Status:      "selesai",
+		})
+	}
+
 	log.Println("Database seeding successful")
 }
 

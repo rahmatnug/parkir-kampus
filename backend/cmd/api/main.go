@@ -20,6 +20,8 @@ func main() {
 	// Initialize repository, usecase, and handler
 	userRepo := repository.NewUserRepository(db)
 	userUsecase := usecase.NewUserUsecase(userRepo)
+	adminRepo := repository.NewAdminRepository(db)
+	adminUsecase := usecase.NewAdminUsecase(adminRepo)
 
 	// Initialize Gin router
 	r := gin.Default()
@@ -37,6 +39,7 @@ func main() {
 	// ─────────────────────────────────────────────────────────────────────────
 
 	http.NewUserHandler(r, userUsecase)
+	http.NewAdminHandler(r, adminUsecase)
 
 	r.GET("/health", func(c *gin.Context) {
 		c.JSON(200, gin.H{"status": "ok"})

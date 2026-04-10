@@ -1,0 +1,6 @@
+Analyzing 4 items...                                            
+
+warning - Unused import: 'dart:math' - lib\presentation\pages\admin_dashboard_home.dart:2:8 - unused_import
+   info - Unnecessary use of 'toList' in a spread - lib\presentation\pages\aktivitas_parkir_page.dart:287:70 - unnecessary_to_list_in_spreads
+  error - The named parameter 'onTap' isn't defined - lib\presentation\pages\dashboard_page.dart:151:21 - undefined_named_parameter
+

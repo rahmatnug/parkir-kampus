@@ -24,7 +24,7 @@ func NewUserHandler(r *gin.Engine, us domain.UserUsecase) {
 // Register handler
 func (a *UserHandler) Register(c *gin.Context) {
 	var input struct {
-		Email    string `json:"email" binding:"required,email"`
+		Email    string `json:"email" binding:"required"`
 		Password string `json:"password" binding:"required"`
 	}
 
@@ -47,7 +47,7 @@ func (a *UserHandler) Register(c *gin.Context) {
 
 func (a *UserHandler) Login(c *gin.Context) {
 	var input struct {
-		Email    string `json:"email" binding:"required,email"`
+		Email    string `json:"email" binding:"required"`
 		Password string `json:"password" binding:"required"`
 	}
 

@@ -14,21 +14,7 @@ class AuthService {
   /// Sends POST /api/login, returns JWT token on success.
   /// Throws [Exception] with a descriptive message on any failure.
   Future<String> login(String email, String password) async {
-    // --- MOCK LOGIC FOR TESTING ---
-    await Future.delayed(const Duration(seconds: 2)); // Simulate network delay
-
-    if (email == 'admin@parkir.com' && password == 'admin123') {
-      // Valid JWT for Admin (id_role: 1)
-      const token = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZF9yb2xlIjoxLCJleHAiOjI1MjQ2MDgwMDB9.ZHVtbXk';
-      await saveToken(token);
-      return token;
-    } else if (email == 'mahasiswa@parkir.com' && password == 'mhs123') {
-      // Valid JWT for Mahasiswa (id_role: 3)
-      const token = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZF9yb2xlIjozLCJleHAiOjI1MjQ2MDgwMDB9.ZHVtbXk';
-      await saveToken(token);
-      return token;
-    }
-    // --- END MOCK LOGIC ---
+    // No mock logic, we use real backend
 
     try {
       final response = await http
@@ -51,6 +37,30 @@ class AuthService {
         throw Exception("Email atau password salah (Unauthorized 401).");
       } else {
         throw Exception('Server error: ${response.statusCode}');
+      }
+    } on SocketException {
+      throw Exception('Gagal terhubung ke server. Periksa koneksi internet Anda.');
+    } on TimeoutException {
+      throw Exception('Request timeout. Server tidak merespons.');
+    }
+  }
+
+  /// Sends POST /api/register
+  Future<void> register(String email, String password) async {
+    try {
+      final response = await http
+          .post(
+            Uri.parse(AppConfig.registerEndpoint),
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode({'email': email, 'password': password}),
+          )
+          .timeout(const Duration(seconds: 10));
+
+      if (response.statusCode == 201) {
+        return; // Success
+      } else {
+        final data = jsonDecode(response.body);
+        throw Exception(data['error'] ?? 'Gagal melakukan registrasi');
       }
     } on SocketException {
       throw Exception('Gagal terhubung ke server. Periksa koneksi internet Anda.');
