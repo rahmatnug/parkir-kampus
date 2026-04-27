@@ -26,10 +26,12 @@ type UserRepository interface {
 	Create(user *User) error
 	FindByEmail(email string) (*User, error)
 	FindByID(id uint) (*User, error)
+	UpdatePassword(userID uint, newPasswordHash string) error
 }
 
 // UserUsecase interface defines the standard business logic methods
 type UserUsecase interface {
 	Register(email, password string) (*User, error)
 	Login(email, password string) (string, error)
+	ChangePassword(userID uint, currentPassword, newPassword string) error
 }

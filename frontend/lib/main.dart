@@ -1,16 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'presentation/providers/auth_provider.dart';
+import 'presentation/providers/parking_provider.dart';
 import 'presentation/pages/user_auth_page.dart';
 import 'presentation/pages/dashboard_page.dart';
 import 'presentation/pages/user_home_page.dart';
 import 'package:frontend/presentation/pages/admin_splash_screen.dart';
+import 'core/network/api_client.dart';
 
 void main() {
   runApp(
     MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => AuthProvider()),
+        ChangeNotifierProvider(create: (_) => ParkingProvider()),
       ],
       child: const ParkirkampusApp(),
     ),
@@ -23,6 +26,7 @@ class ParkirkampusApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      navigatorKey: navigatorKey,
       title: 'PARKIR KAMPUS',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
@@ -32,6 +36,22 @@ class ParkirkampusApp extends StatelessWidget {
         ),
         useMaterial3: true,
         fontFamily: 'Roboto',
+        popupMenuTheme: PopupMenuThemeData(
+          color: Colors.white,
+          elevation: 4,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        ),
+        dialogBackgroundColor: Colors.white,
+        dialogTheme: const DialogThemeData(
+          backgroundColor: Colors.white,
+          surfaceTintColor: Colors.transparent,
+          titleTextStyle: TextStyle(color: Colors.black87, fontSize: 20, fontWeight: FontWeight.bold),
+          contentTextStyle: TextStyle(color: Colors.black87),
+        ),
+        bottomSheetTheme: const BottomSheetThemeData(
+          backgroundColor: Colors.white,
+          surfaceTintColor: Colors.transparent,
+        ),
       ),
       // LAYAR PERTAMA SEKARANG ADALAH ADMIN SPLASH SCREEN
       home: const AdminSplashScreen(),

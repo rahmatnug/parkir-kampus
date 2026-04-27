@@ -4,7 +4,6 @@ import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../../core/config/app_config.dart';
-import '../models/login_response.dart';
 
 class AuthService {
   final FlutterSecureStorage _storage = const FlutterSecureStorage();
@@ -24,7 +23,7 @@ class AuthService {
             body: jsonEncode({'email': email, 'password': password}),
           )
           .timeout(const Duration(seconds: 10));
-  // ... rest of the code
+      // ... rest of the code
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         final token = data['token'] ?? '';
@@ -39,7 +38,9 @@ class AuthService {
         throw Exception('Server error: ${response.statusCode}');
       }
     } on SocketException {
-      throw Exception('Gagal terhubung ke server. Periksa koneksi internet Anda.');
+      throw Exception(
+        'Gagal terhubung ke server. Periksa koneksi internet Anda.',
+      );
     } on TimeoutException {
       throw Exception('Request timeout. Server tidak merespons.');
     }
@@ -63,7 +64,9 @@ class AuthService {
         throw Exception(data['error'] ?? 'Gagal melakukan registrasi');
       }
     } on SocketException {
-      throw Exception('Gagal terhubung ke server. Periksa koneksi internet Anda.');
+      throw Exception(
+        'Gagal terhubung ke server. Periksa koneksi internet Anda.',
+      );
     } on TimeoutException {
       throw Exception('Request timeout. Server tidak merespons.');
     }

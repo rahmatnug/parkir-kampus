@@ -71,3 +71,25 @@ func (u *userUsecase) Login(email, password string) (string, error) {
 
 	return token, nil
 }
+
+func (u *userUsecase) ChangePassword(userID uint, currentPassword, newPassword string) error {
+	// 1. Find the user
+	user, err := u.userRepo.FindByID(userID)
+	if err != nil || user == nil {
+		return errors.New("user tidak ditemukan")
+	}
+
+	// 2. Verify current password
+	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(currentPassword)); err != nil {
+		return errors.New("password saat ini tidak sesuai")
+	}
+
+	// 3. Hash the new password
+	hashed, err := bcrypt.GenerateFromPassword([]byte(newPassword), bcrypt.DefaultCost)
+	if err != nil {
+		return err
+	}
+
+	// 4. Persist
+	return u.userRepo.UpdatePassword(userID, string(hashed))
+}

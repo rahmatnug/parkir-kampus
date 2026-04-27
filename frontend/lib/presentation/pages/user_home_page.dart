@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
+import 'user_edit_profile_page.dart';
+import 'change_password_page.dart';
 
 // ─── Data ──────────────────────────────────────────────────────────────────
 class _ParkingZone {
@@ -59,21 +61,21 @@ class UserHomePage extends StatefulWidget {
 class _UserHomePageState extends State<UserHomePage> {
   int _selectedTab = 0;
 
-  final _tabs = const [
-    _HomeTab(),
-    _ParkingTab(),
-    _ScanTab(),
-    _AlertsTab(),
-    _ProfileTab(),
-  ];
-
   @override
   Widget build(BuildContext context) {
+    final tabs = [
+      const _HomeTab(),
+      _ParkingTab(onBack: () => setState(() => _selectedTab = 0)),
+      const _ScanTab(),
+      _AlertsTab(onBack: () => setState(() => _selectedTab = 0)),
+      _ProfileTab(onBack: () => setState(() => _selectedTab = 0)),
+    ];
+
     return Scaffold(
       backgroundColor: Colors.white,
       body: IndexedStack(
         index: _selectedTab,
-        children: _tabs,
+        children: tabs,
       ),
       bottomNavigationBar: _BottomNav(
         selectedIndex: _selectedTab,
@@ -496,30 +498,141 @@ class _ZoneCard extends StatelessWidget {
   }
 }
 
-// ─── PARKING TAB (placeholder) ────────────────────────────────────────────────
+// ─── PARKING TAB ──────────────────────────────────────────────────────────────
 class _ParkingTab extends StatelessWidget {
-  const _ParkingTab();
+  final VoidCallback? onBack;
+
+  const _ParkingTab({this.onBack});
 
   @override
   Widget build(BuildContext context) {
-    return const SafeArea(
-      child: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.local_parking_rounded,
-                size: 64, color: Color(0xFFDBEAFE)),
-            SizedBox(height: 16),
-            Text('Parking History',
-                style: TextStyle(
-                    fontSize: 18,
+    return SafeArea(
+      child: Column(
+        children: [
+          // Header
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            child: Row(
+              children: [
+                GestureDetector(
+                  onTap: onBack,
+                  child: const Icon(Icons.arrow_back, color: Color(0xFF0F172A)),
+                ),
+                const Expanded(
+                  child: Center(
+                    child: Text(
+                      'Parkir',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF0F172A),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 24), // Balance the arrow
+              ],
+            ),
+          ),
+          const Divider(height: 1, color: Color(0xFFE2E8F0)),
+
+          // Map area
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+              child: Stack(
+                children: [
+                  Positioned.fill(
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: Image.asset(
+                        'assets/images/maps.png',
+                        fit: BoxFit.cover,
+                      ),
+                    ),
+                  ),
+                  // Marker
+                  Align(
+                    alignment: const Alignment(-0.2, -0.7),
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        const Icon(
+                          Icons.location_on,
+                          color: Color(0xFF60A5FA),
+                          size: 54,
+                        ),
+                        Positioned(
+                          top: 12,
+                          child: Container(
+                            width: 14,
+                            height: 14,
+                            decoration: const BoxDecoration(
+                              color: Colors.white,
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          // Info Card
+          Container(
+            width: double.infinity,
+            margin: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+            padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
+            decoration: BoxDecoration(
+              color: const Color(0xFF007AFF), // Bright blue
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: const [
+                BoxShadow(
+                  color: Color(0x33007AFF),
+                  blurRadius: 10,
+                  offset: Offset(0, 4),
+                ),
+              ],
+            ),
+            child: const Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'Motor Anda ada di Zona B',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 20,
                     fontWeight: FontWeight.bold,
-                    color: Color(0xFF0F172A))),
-            SizedBox(height: 8),
-            Text('Riwayat parkir Anda akan muncul di sini.',
-                style: TextStyle(fontSize: 14, color: Color(0xFF64748B))),
-          ],
-        ),
+                  ),
+                ),
+                SizedBox(height: 4),
+                Text(
+                  '#12',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                SizedBox(height: 8),
+                Text(
+                  'Scan QR Code ulang untuk keluar',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontStyle: FontStyle.italic,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -562,30 +675,182 @@ class _ScanTab extends StatelessWidget {
   }
 }
 
-// ─── ALERTS TAB (placeholder) ──────────────────────────────────────────────────
+// ─── ALERTS TAB ──────────────────────────────────────────────────────────────
 class _AlertsTab extends StatelessWidget {
-  const _AlertsTab();
+  final VoidCallback? onBack;
+
+  const _AlertsTab({this.onBack});
 
   @override
   Widget build(BuildContext context) {
-    return const SafeArea(
-      child: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.notifications_none_rounded,
-                size: 64, color: Color(0xFFDBEAFE)),
-            SizedBox(height: 16),
-            Text('Notifikasi',
-                style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF0F172A))),
-            SizedBox(height: 8),
-            Text('Belum ada notifikasi.',
-                style: TextStyle(fontSize: 14, color: Color(0xFF64748B))),
-          ],
-        ),
+    return SafeArea(
+      child: Column(
+        children: [
+          // Header
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            child: Row(
+              children: [
+                GestureDetector(
+                  onTap: onBack,
+                  child: const Icon(Icons.arrow_back, color: Color(0xFF0F172A)),
+                ),
+                const Expanded(
+                  child: Center(
+                    child: Text(
+                      'Notifications',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF0F172A),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 24),
+              ],
+            ),
+          ),
+          const Divider(height: 1, color: Color(0xFFE2E8F0)),
+
+          // List
+          Expanded(
+            child: ListView(
+              padding: const EdgeInsets.all(16),
+              children: [
+                // Notification 1
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  margin: const EdgeInsets.only(bottom: 16),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Container(
+                                  width: 8,
+                                  height: 8,
+                                  decoration: const BoxDecoration(
+                                    color: Color(0xFF2563EB),
+                                    shape: BoxShape.circle,
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                const Text(
+                                  'Baru saja',
+                                  style: TextStyle(
+                                    color: Color(0xFF64748B),
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            const Text(
+                              'Slot tersedia di Zone B',
+                              style: TextStyle(
+                                color: Color(0xFF0F172A),
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: Image.asset(
+                          'assets/images/maps.png',
+                          width: 80,
+                          height: 80,
+                          fit: BoxFit.cover,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                // Notification 2
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  margin: const EdgeInsets.only(bottom: 16),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF8FAFC),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                const Icon(Icons.warning_amber_rounded,
+                                    color: Color(0xFFD97706), size: 16),
+                                const SizedBox(width: 4),
+                                const Text(
+                                  '2h ago',
+                                  style: TextStyle(
+                                    color: Color(0xFF64748B),
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            const Text(
+                              'Warning: cek Kunci Motor anda',
+                              style: TextStyle(
+                                color: Color(0xFF0F172A),
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                height: 1.2,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            const Text(
+                              'Satpam Telah menemukan kunci motor anda belum tercabut',
+                              style: TextStyle(
+                                color: Color(0xFF475569),
+                                fontSize: 13,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Container(
+                        width: 80,
+                        height: 80,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFEF3C7),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Center(
+                          child: Icon(Icons.warning_rounded,
+                              color: Color(0xFFD97706), size: 40),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -593,57 +858,285 @@ class _AlertsTab extends StatelessWidget {
 
 // ─── PROFILE TAB ──────────────────────────────────────────────────────────────
 class _ProfileTab extends StatelessWidget {
-  const _ProfileTab();
+  final VoidCallback? onBack;
+
+  const _ProfileTab({this.onBack});
 
   @override
   Widget build(BuildContext context) {
     return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          children: [
-            const SizedBox(height: 24),
-            const CircleAvatar(
-              radius: 44,
-              backgroundColor: Color(0xFFDBEAFE),
-              child: Icon(Icons.person_rounded,
-                  size: 52, color: Color(0xFF2563EB)),
-            ),
-            const SizedBox(height: 16),
-            const Text(
-              'Student User',
-              style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF0F172A)),
-            ),
-            const SizedBox(height: 4),
-            const Text('student@univ.ac.id',
-                style: TextStyle(fontSize: 14, color: Color(0xFF64748B))),
-            const SizedBox(height: 32),
-
-            // Logout button
-            SizedBox(
-              width: double.infinity,
-              height: 50,
-              child: OutlinedButton.icon(
-                onPressed: () =>
-                    context.read<AuthProvider>().logout(),
-                icon: const Icon(Icons.logout_rounded,
-                    color: Color(0xFFDC2626)),
-                label: const Text('Keluar',
-                    style: TextStyle(
-                        color: Color(0xFFDC2626),
-                        fontWeight: FontWeight.w600)),
-                style: OutlinedButton.styleFrom(
-                  side: const BorderSide(color: Color(0xFFFFE4E6)),
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12)),
+      child: Column(
+        children: [
+          // Header
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            child: Row(
+              children: [
+                GestureDetector(
+                  onTap: onBack,
+                  child: const Icon(Icons.arrow_back, color: Color(0xFF0F172A)),
                 ),
+                const Expanded(
+                  child: Center(
+                    child: Text(
+                      'Profil',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF0F172A),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 24),
+              ],
+            ),
+          ),
+          const Divider(height: 1, color: Color(0xFFE2E8F0)),
+
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                children: [
+                  // Avatar with Edit Button
+                  Stack(
+                    children: [
+                      Container(
+                        width: 100,
+                        height: 100,
+                        decoration: const BoxDecoration(
+                          color: Color(0xFFEDCDB3), // Skin-ish color
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.person,
+                          size: 60,
+                          color: Colors.white,
+                        ),
+                      ),
+                      Positioned(
+                        bottom: 0,
+                        right: 0,
+                        child: GestureDetector(
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const UserEditProfilePage(),
+                              ),
+                            );
+                          },
+                          child: Container(
+                            width: 32,
+                            height: 32,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF0052CC),
+                              shape: BoxShape.circle,
+                              border: Border.all(color: Colors.white, width: 2),
+                            ),
+                            child: const Icon(
+                              Icons.edit,
+                              color: Colors.white,
+                              size: 16,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'John Doe',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF0F172A),
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  const Text(
+                    'NIM: 21004567',
+                    style: TextStyle(fontSize: 14, color: Color(0xFF64748B)),
+                  ),
+                  const SizedBox(height: 32),
+
+                  // Informasi Kendaraan Card
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: const Color(0xFFE2E8F0)),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'INFORMASI KENDARAAN',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF475569),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Container(
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFF1F5F9),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: const [
+                                    Text(
+                                      'NOMOR PLAT',
+                                      style: TextStyle(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w600,
+                                        color: Color(0xFF64748B),
+                                      ),
+                                    ),
+                                    SizedBox(height: 4),
+                                    Text(
+                                      'B 1234 ABC',
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.bold,
+                                        color: Color(0xFF2563EB),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Container(
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFF1F5F9),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: const [
+                                    Text(
+                                      'JENIS KENDARAAN',
+                                      style: TextStyle(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w600,
+                                        color: Color(0xFF64748B),
+                                      ),
+                                    ),
+                                    SizedBox(height: 4),
+                                    Text(
+                                      'Motor',
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.bold,
+                                        color: Color(0xFF0F172A),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+
+                  // Menu List
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: Container(
+                      width: 48,
+                      height: 48,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFEFF6FF),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(Icons.lock_outline_rounded,
+                          color: Color(0xFF2563EB)),
+                    ),
+                    title: const Text(
+                      'Ganti Password',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF0F172A),
+                      ),
+                    ),
+                    trailing: const Icon(Icons.chevron_right_rounded,
+                        color: Color(0xFF64748B)),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const ChangePasswordPage(),
+                        ),
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 8),
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: Container(
+                      width: 48,
+                      height: 48,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFEFF6FF),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(Icons.help_outline_rounded,
+                          color: Color(0xFF2563EB)),
+                    ),
+                    title: const Text(
+                      'Help Center',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF0F172A),
+                      ),
+                    ),
+                    trailing: const Icon(Icons.chevron_right_rounded,
+                        color: Color(0xFF64748B)),
+                    onTap: () {},
+                  ),
+                  
+                  // Keep logout button at the bottom
+                  const SizedBox(height: 32),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 50,
+                    child: OutlinedButton.icon(
+                      onPressed: () => context.read<AuthProvider>().logout(),
+                      icon: const Icon(Icons.logout_rounded,
+                          color: Color(0xFFDC2626)),
+                      label: const Text('Keluar',
+                          style: TextStyle(
+                              color: Color(0xFFDC2626),
+                              fontWeight: FontWeight.w600)),
+                      style: OutlinedButton.styleFrom(
+                        side: const BorderSide(color: Color(0xFFFFE4E6)),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12)),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

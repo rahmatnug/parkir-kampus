@@ -4,7 +4,6 @@ import '../providers/auth_provider.dart';
 import '../widgets/status_card.dart';
 import '../widgets/qr_identity_card.dart';
 import '../../data/models/vehicle_status.dart';
-import 'login_page.dart';
 import 'riwayat_parkir_page.dart';
 
 class MahasiswaPage extends StatelessWidget {
@@ -26,7 +25,15 @@ class MahasiswaPage extends StatelessWidget {
         appBar: AppBar(
           backgroundColor: const Color(0xFF1E293B),
           elevation: 0,
-          title: const Text('PARKIR KAMPUS', style: TextStyle(fontWeight: FontWeight.w800, color: Colors.white, fontSize: 18, letterSpacing: 1.5)),
+          title: const Text(
+            'PARKIR KAMPUS',
+            style: TextStyle(
+              fontWeight: FontWeight.w800,
+              color: Colors.white,
+              fontSize: 18,
+              letterSpacing: 1.5,
+            ),
+          ),
           actions: [
             IconButton(
               icon: const Icon(Icons.logout_rounded, color: Color(0xFF94A3B8)),
@@ -41,15 +48,28 @@ class MahasiswaPage extends StatelessWidget {
                 if (auth.penaltyPoints > 0)
                   MaterialBanner(
                     backgroundColor: Colors.amber.shade700,
-                    leading: const Icon(Icons.warning_amber_rounded, color: Colors.white),
+                    leading: const Icon(
+                      Icons.warning_amber_rounded,
+                      color: Colors.white,
+                    ),
                     content: Text(
                       "Anda memiliki ${auth.penaltyPoints} poin penalti. Patuhi aturan parkir kampus.",
-                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13,
+                      ),
                     ),
                     actions: [
                       TextButton(
                         onPressed: () {},
-                        child: const Text("DETAIL", style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900)),
+                        child: const Text(
+                          "DETAIL",
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
                       ),
                     ],
                   ),
@@ -58,18 +78,16 @@ class MahasiswaPage extends StatelessWidget {
                   indicatorWeight: 3,
                   labelColor: Colors.white,
                   unselectedLabelColor: Color(0xFF94A3B8),
-                  tabs: [Tab(text: "STATUS"), Tab(text: "RIWAYAT")],
+                  tabs: [
+                    Tab(text: "STATUS"),
+                    Tab(text: "RIWAYAT"),
+                  ],
                 ),
               ],
             ),
           ),
         ),
-        body: const TabBarView(
-          children: [
-            _StatusView(),
-            RiwayatParkirPage(),
-          ],
-        ),
+        body: const TabBarView(children: [_StatusView(), RiwayatParkirPage()]),
       ),
     );
   }
@@ -91,7 +109,8 @@ class _StatusView extends StatelessWidget {
           StreamBuilder<VehicleStatus>(
             stream: getVehicleStatusUpdates(),
             builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) return const CircularProgressIndicator();
+              if (snapshot.connectionState == ConnectionState.waiting)
+                return const CircularProgressIndicator();
               if (snapshot.hasError) return Text("Error: ${snapshot.error}");
               return StatusCard(status: snapshot.data!);
             },
@@ -116,21 +135,38 @@ class _BlacklistView extends StatelessWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.block_flipped, color: Colors.redAccent, size: 100),
+              const Icon(
+                Icons.block_flipped,
+                color: Colors.redAccent,
+                size: 100,
+              ),
               const SizedBox(height: 24),
               const Text(
                 "AKSES PARKIR DIBLOKIR",
                 textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.w900, letterSpacing: 1.2),
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 24,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 1.2,
+                ),
               ),
               const SizedBox(height: 16),
               Container(
                 padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(color: Colors.redAccent.withOpacity(0.1), borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.redAccent.withOpacity(0.3))),
+                decoration: BoxDecoration(
+                  color: Colors.redAccent.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.redAccent.withOpacity(0.3)),
+                ),
                 child: Text(
                   "Alasan: $reason",
                   textAlign: TextAlign.center,
-                  style: const TextStyle(color: Colors.redAccent, fontSize: 14, fontWeight: FontWeight.w600),
+                  style: const TextStyle(
+                    color: Colors.redAccent,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
               const SizedBox(height: 40),
@@ -138,8 +174,11 @@ class _BlacklistView extends StatelessWidget {
                 onPressed: () => context.read<AuthProvider>().logout(),
                 icon: const Icon(Icons.logout),
                 label: const Text("KELUAR APLIKASI"),
-                style: ElevatedButton.styleFrom(backgroundColor: Colors.white12, foregroundColor: Colors.white),
-              )
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.white12,
+                  foregroundColor: Colors.white,
+                ),
+              ),
             ],
           ),
         ),

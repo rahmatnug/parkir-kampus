@@ -54,6 +54,9 @@ func ConnectDB() *gorm.DB {
 		&domain.ZonaParkir{},
 		&domain.SlotParkir{},
 		&domain.Transaksi{},
+		&domain.WaitingList{},
+		&domain.Penalti{},
+		&domain.Blacklist{},
 	)
 	if err != nil {
 		log.Fatalf("Failed to automigrate: %v", err)
@@ -72,6 +75,8 @@ func SeedData(db *gorm.DB) {
 		{ID: 1, NamaRole: "admin", Prioritas: 1},
 		{ID: 2, NamaRole: "dosen", Prioritas: 2},
 		{ID: 3, NamaRole: "mahasiswa", Prioritas: 3},
+		{ID: 4, NamaRole: "staff", Prioritas: 4},
+		{ID: 5, NamaRole: "tamu", Prioritas: 5},
 	}
 
 	for _, role := range roles {

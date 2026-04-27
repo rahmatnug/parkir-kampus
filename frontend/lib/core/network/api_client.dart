@@ -28,18 +28,50 @@ class ApiClient {
         return handler.next(options);
       },
       onError: (DioException e, handler) async {
-        // 2. Tangani 401 Unauthorized (Token Expired/Invalid)
-        if (e.response?.statusCode == 401) {
+        final statusCode = e.response?.statusCode;
+        final context = navigatorKey.currentContext;
+
+        if (statusCode == 401) {
           await _storage.delete(key: 'auth_token');
-          
-          // Force Logout: Arahkan ke Login Page
           navigatorKey.currentState?.pushNamedAndRemoveUntil('/login', (route) => false);
-          
           return handler.reject(DioException(
             requestOptions: e.requestOptions,
             error: "Sesi telah berakhir. Silakan login kembali.",
           ));
         }
+
+        if (statusCode == 409 && context != null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text("Sistem sedang sibuk memproses antrean. Silakan coba Tap-In lagi dalam 3 detik.")),
+          );
+        }
+
+        if (statusCode == 504 && context != null) {
+          showDialog(
+            context: context,
+            builder: (ctx) => AlertDialog(
+              title: const Text("Koneksi Timeout"),
+              content: const Text("Gangguan koneksi ke Gerbang Parkir. Hubungi Satpam."),
+              actions: [
+                TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("OK")),
+              ],
+            ),
+          );
+        }
+
+        if (statusCode == 403 && context != null) {
+          showDialog(
+            context: context,
+            builder: (ctx) => AlertDialog(
+              title: const Text("Akses Ditolak"),
+              content: const Text("Anda tidak memiliki izin."),
+              actions: [
+                TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("OK")),
+              ],
+            ),
+          );
+        }
+
         return handler.next(e);
       },
     ));

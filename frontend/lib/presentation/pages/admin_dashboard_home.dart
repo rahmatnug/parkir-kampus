@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../data/services/admin_service.dart';
+import 'aktivitas_parkir_page.dart';
+import 'export_preview_page.dart';
 // Colors shared
 const _kBlue = Color(0xFF1E3FAE);
 const _kBg = Color(0xFFF4F5F7);
@@ -19,6 +21,7 @@ class _AdminDashboardHomeState extends State<AdminDashboardHome> {
   final _adminService = AdminService();
   bool _isLoading = true;
   Map<String, dynamic> _stats = {};
+  List<dynamic> _activities = [];
 
   @override
   void initState() {
@@ -29,7 +32,12 @@ class _AdminDashboardHomeState extends State<AdminDashboardHome> {
   Future<void> _fetchStats() async {
     try {
       final stats = await _adminService.getDashboardStats();
-      if (mounted) setState(() { _stats = stats; _isLoading = false; });
+      final acts  = await _adminService.getActivities();
+      if (mounted) setState(() {
+        _stats      = stats;
+        _activities = acts;
+        _isLoading  = false;
+      });
     } catch (e) {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -73,11 +81,23 @@ class _AdminDashboardHomeState extends State<AdminDashboardHome> {
                 _OutlineBtn(
                   icon: Icons.calendar_today_outlined,
                   label: 'Last 24 Hours',
-                  onTap: () {},
+                  onTap: () {
+                    // Filter waktu — tampilkan snackbar info (data real sudah dari API)
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Menampilkan data 24 jam terakhir'),
+                        duration: Duration(seconds: 2),
+                      ),
+                    );
+                  },
                 ),
                 const SizedBox(width: 10),
                 ElevatedButton.icon(
-                  onPressed: () {},
+                  onPressed: () {
+                    Navigator.of(context).push(MaterialPageRoute(
+                      builder: (_) => ExportPreviewPage(activities: _activities),
+                    ));
+                  },
                   icon: const Icon(Icons.download_rounded, size: 16),
                   label: const Text('Export Data',
                       style: TextStyle(fontSize: 13,
@@ -139,7 +159,7 @@ class _AdminDashboardHomeState extends State<AdminDashboardHome> {
                     title: 'Occupancy per Zone',
                     badge: '+2.4% vs last day',
                     badgeColor: _kGreen,
-                    child: const _BarChartWidget(),
+                    child: _BarChartWidget(activities: _activities),
                   ),
                 ),
                 const SizedBox(width: 16),
@@ -259,15 +279,28 @@ class _ChartCard extends StatelessWidget {
 
 // ─── Simple Bar Chart ─────────────────────────────────────────────────────────
 class _BarChartWidget extends StatelessWidget {
-  const _BarChartWidget();
+  final List<dynamic> activities;
+  const _BarChartWidget({this.activities = const []});
 
   @override
   Widget build(BuildContext context) {
-    final zones = [
-      _ZoneData('ZONA A', 30, 10),
-      _ZoneData('ZONA B', 25, 10),
-      _ZoneData('ZONA C', 48, 12),
-    ];
+    // Build zone data dynamically from real activities
+    final Map<String, double> motorMap = {};
+    final Map<String, double> mobilMap = {};
+    for (final a in activities) {
+      final zona = (a['zona'] ?? 'Lainnya') as String;
+      final role = (a['role'] ?? '') as String;
+      if (role == 'mahasiswa') {
+        motorMap[zona] = (motorMap[zona] ?? 0) + 1;
+      } else {
+        mobilMap[zona] = (mobilMap[zona] ?? 0) + 1;
+      }
+    }
+    final allZones = {...motorMap.keys, ...mobilMap.keys}.toList()..sort();
+    // Fallback if no data yet
+    final zones = allZones.isEmpty
+        ? [_ZoneData('ZONA A', 0, 0), _ZoneData('ZONA B', 0, 0), _ZoneData('ZONA C', 0, 0)]
+        : allZones.map((z) => _ZoneData(z, motorMap[z] ?? 0, mobilMap[z] ?? 0)).toList();
     return SizedBox(
       height: 200,
       child: Column(
@@ -495,7 +528,11 @@ class _RecentActivityTableState extends State<_RecentActivityTable> {
                         fontWeight: FontWeight.w600, color: _kText)),
                 const Spacer(),
                 TextButton(
-                  onPressed: () {},
+                  onPressed: () {
+                    Navigator.of(context).push(MaterialPageRoute(
+                      builder: (_) => const AktivitasParkirPage(),
+                    ));
+                  },
                   child: const Text('View All',
                       style: TextStyle(fontSize: 13, color: _kBlue)),
                 ),

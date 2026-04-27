@@ -4,6 +4,8 @@ import '../providers/auth_provider.dart';
 import 'admin_dashboard_home.dart';
 import 'user_management_page.dart';
 import 'aktivitas_parkir_page.dart';
+import 'change_password_page.dart';
+import 'blacklist_page.dart';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const kBlue = Color(0xFF1E3FAE);
@@ -26,7 +28,7 @@ class _DashboardPageState extends State<DashboardPage> {
     AdminDashboardHome(),
     UserManagementPage(),
     AktivitasParkirPage(),
-    _BlacklistPage(),
+    BlacklistPage(),
   ];
 
   @override
@@ -136,7 +138,11 @@ class _Sidebar extends StatelessWidget {
                                 fontWeight: FontWeight.w600, color: kText),
                             overflow: TextOverflow.ellipsis),
                         GestureDetector(
-                          onTap: () {},
+                          onTap: () => Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => const ChangePasswordPage(),
+                            ),
+                          ),
                           child: const Text('Ganti Password?',
                               style: TextStyle(fontSize: 10, color: kBlue)),
                         ),
@@ -199,55 +205,6 @@ class _SidebarItem extends StatelessWidget {
                           : FontWeight.normal,
                       color: selected ? kBlue : kMuted),
                   overflow: TextOverflow.ellipsis),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ─── Blacklist placeholder ────────────────────────────────────────────────────
-class _BlacklistPage extends StatelessWidget {
-  const _BlacklistPage();
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: kBg,
-      body: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text('Blacklist',
-                style: TextStyle(fontSize: 28,
-                    fontWeight: FontWeight.bold, color: kText)),
-            const SizedBox(height: 8),
-            const Text('Kelola daftar pengguna yang diblokir.',
-                style: TextStyle(fontSize: 14, color: kMuted)),
-            const SizedBox(height: 32),
-            Expanded(
-              child: Container(
-                width: double.infinity,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: kBorder),
-                ),
-                child: const Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.block_rounded, size: 64,
-                          color: Color(0xFFCBD5E1)),
-                      SizedBox(height: 16),
-                      Text('Tidak ada pengguna yang diblokir',
-                          style: TextStyle(color: kMuted, fontSize: 15)),
-                    ],
-                  ),
-                ),
-              ),
             ),
           ],
         ),

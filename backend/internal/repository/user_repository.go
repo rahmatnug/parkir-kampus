@@ -45,3 +45,9 @@ func (r *userRepository) FindByID(id uint) (*domain.User, error) {
 	}
 	return &user, nil
 }
+
+func (r *userRepository) UpdatePassword(userID uint, newPasswordHash string) error {
+	return r.db.Model(&domain.User{}).
+		Where("id_user = ?", userID).
+		Update("password_hash", newPasswordHash).Error
+}

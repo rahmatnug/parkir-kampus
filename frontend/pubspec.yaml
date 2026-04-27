@@ -39,6 +39,11 @@ dependencies:
   provider: ^6.1.2
   jwt_decoder: ^2.0.1
   qr_flutter: ^4.1.0
+  dio: ^5.9.2
+  web_socket_channel: ^3.0.3
+  fl_chart: ^0.69.0
+  pdf: ^3.11.1
+  printing: ^5.13.1
 
 dev_dependencies:
   flutter_test:

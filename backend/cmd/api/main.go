@@ -6,10 +6,13 @@ import (
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 
-	"github.com/rahmatnug/parkir-kampus-backend/internal/delivery/http"
+	deliveryHTTP "github.com/rahmatnug/parkir-kampus-backend/internal/delivery/http"
+	deliveryWS "github.com/rahmatnug/parkir-kampus-backend/internal/delivery/websocket"
 	"github.com/rahmatnug/parkir-kampus-backend/internal/repository"
 	"github.com/rahmatnug/parkir-kampus-backend/internal/usecase"
+	"github.com/rahmatnug/parkir-kampus-backend/internal/cron"
 	"github.com/rahmatnug/parkir-kampus-backend/pkg/database"
+	"github.com/rahmatnug/parkir-kampus-backend/pkg/redis"
 )
 
 func main() {
@@ -17,13 +20,32 @@ func main() {
 	db := database.ConnectDB()
 	log.Println("Database initialized")
 
-	// Initialize repository, usecase, and handler
-	userRepo := repository.NewUserRepository(db)
-	userUsecase := usecase.NewUserUsecase(userRepo)
-	adminRepo := repository.NewAdminRepository(db)
-	adminUsecase := usecase.NewAdminUsecase(adminRepo)
+	// Initialize Redis
+	redis.InitRedis()
+	log.Println("Redis initialized")
 
-	// Initialize Gin router
+	// ─── Repository layer ────────────────────────────────────────────────
+	userRepo := repository.NewUserRepository(db)
+	adminRepo := repository.NewAdminRepository(db)
+	reportRepo := repository.NewReportRepository(db)
+	parkingRepo := repository.NewParkingRepository(db)
+
+	// ─── Usecase layer ──────────────────────────────────────────────────
+	userUsecase := usecase.NewUserUsecase(userRepo)
+	adminUsecase := usecase.NewAdminUsecase(adminRepo)
+	reportUsecase := usecase.NewReportUsecase(reportRepo)
+	parkingUsecase := usecase.NewParkingUsecase(parkingRepo, userRepo)
+
+	// ─── WebSocket Hub ──────────────────────────────────────────────────
+	wsHub := deliveryWS.NewHub()
+	go wsHub.Run()
+	log.Println("WebSocket hub started")
+
+	// ─── Cron Jobs ──────────────────────────────────────────────────────
+	cronJob := cron.NewCronJob(parkingRepo)
+	cronJob.Init()
+
+	// ─── Gin router ─────────────────────────────────────────────────────
 	r := gin.Default()
 
 	// ─── CORS Middleware ──────────────────────────────────────────────────────
@@ -38,14 +60,23 @@ func main() {
 	}))
 	// ─────────────────────────────────────────────────────────────────────────
 
-	http.NewUserHandler(r, userUsecase)
-	http.NewAdminHandler(r, adminUsecase)
+	// ─── HTTP handlers ──────────────────────────────────────────────────
+	deliveryHTTP.NewUserHandler(r, userUsecase)
+	deliveryHTTP.NewAdminHandler(r, adminUsecase)
+	deliveryHTTP.NewReportHandler(r, reportUsecase)
+	deliveryHTTP.NewParkingHandler(r, parkingUsecase)
 
+	// ─── WebSocket handler ──────────────────────────────────────────────
+	deliveryWS.NewWSHandler(r, wsHub)
+
+	// ─── Health check ───────────────────────────────────────────────────
 	r.GET("/health", func(c *gin.Context) {
 		c.JSON(200, gin.H{"status": "ok"})
 	})
 
 	log.Println("Server mapping to port :8080")
+	log.Println("WebSocket endpoint: GET /api/v1/ws/connect?token=X")
+	log.Println("Report endpoints:   GET /api/v1/reports/{daily,analytical,audit}")
 	if err := r.Run(":8080"); err != nil {
 		log.Fatalf("Failed to run server: %v", err)
 	}

@@ -19,6 +19,13 @@ func NewUserHandler(r *gin.Engine, us domain.UserUsecase) {
 	}
 	r.POST("/api/register", handler.Register)
 	r.POST("/api/login", handler.Login)
+
+	// Protected routes
+	protected := r.Group("/api/user")
+	protected.Use(AuthMiddleware())
+	{
+		protected.PUT("/change-password", handler.ChangePassword)
+	}
 }
 
 // Register handler
@@ -66,4 +73,25 @@ func (a *UserHandler) Login(c *gin.Context) {
 		"message": "Login successful",
 		"token":   token,
 	})
+}
+
+func (a *UserHandler) ChangePassword(c *gin.Context) {
+	userID := c.MustGet("id_user").(uint)
+
+	var input struct {
+		CurrentPassword string `json:"current_password" binding:"required"`
+		NewPassword     string `json:"new_password" binding:"required,min=8"`
+	}
+
+	if err := c.ShouldBindJSON(&input); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"status": "error", "message": err.Error()})
+		return
+	}
+
+	if err := a.UserUsecase.ChangePassword(userID, input.CurrentPassword, input.NewPassword); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"status": "error", "message": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"status": "success", "message": "Password berhasil diperbarui"})
 }

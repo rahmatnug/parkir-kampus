@@ -21,12 +21,12 @@ class ParkingRepository {
     }
   }
 
-  /// Contoh POST request (Misal: Tap-In via QR)
-  Future<bool> tapIn(String userId, String qrData) async {
+  Future<bool> tapIn(String userId, String qrData, String idZona) async {
     try {
       await _apiClient.dio.post('/api/v1/parking/tap-in', data: {
         'user_id': userId,
         'qr_data': qrData,
+        'id_zona': idZona,
       });
       return true;
     } catch (e) {
