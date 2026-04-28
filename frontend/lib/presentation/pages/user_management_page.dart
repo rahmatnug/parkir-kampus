@@ -558,8 +558,8 @@ class _UserRowState extends State<_UserRow> {
   Widget build(BuildContext context) {
     final user         = widget.user;
     final name         = user['name']   ?? 'Unknown';
-    // Dummy ID for now if not available in API
-    final String nim   = '20210081042'; 
+    final nimRaw       = user['nim']?.toString() ?? '';
+    final String nim   = nimRaw.isNotEmpty ? nimRaw : 'No NIM'; 
     String role        = user['role']   ?? 'mahasiswa';
     if (role.isNotEmpty) role = role[0].toUpperCase() + role.substring(1);
 

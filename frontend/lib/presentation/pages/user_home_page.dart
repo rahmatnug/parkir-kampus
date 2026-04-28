@@ -275,9 +275,9 @@ class _HomeTab extends StatelessWidget {
                         style: const TextStyle(
                             fontSize: 13, color: Color(0xFF64748B)),
                       ),
-                      const Text(
-                        'Welcome, Student',
-                        style: TextStyle(
+                      Text(
+                        'Welcome, ${context.watch<AuthProvider>().nama?.split(' ').first ?? 'Student'}',
+                        style: const TextStyle(
                           fontSize: 17,
                           fontWeight: FontWeight.bold,
                           color: Color(0xFF0F172A),
@@ -864,6 +864,7 @@ class _ProfileTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final auth = context.watch<AuthProvider>();
     return SafeArea(
       child: Column(
         children: [
@@ -946,18 +947,18 @@ class _ProfileTab extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(height: 16),
-                  const Text(
-                    'John Doe',
-                    style: TextStyle(
+                  Text(
+                    auth.nama ?? 'Guest',
+                    style: const TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
                       color: Color(0xFF0F172A),
                     ),
                   ),
                   const SizedBox(height: 4),
-                  const Text(
-                    'NIM: 21004567',
-                    style: TextStyle(fontSize: 14, color: Color(0xFF64748B)),
+                  Text(
+                    'NIM: ${auth.nim ?? '-'}',
+                    style: const TextStyle(fontSize: 14, color: Color(0xFF64748B)),
                   ),
                   const SizedBox(height: 32),
 
@@ -993,8 +994,8 @@ class _ProfileTab extends StatelessWidget {
                                 ),
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: const [
-                                    Text(
+                                  children: [
+                                    const Text(
                                       'NOMOR PLAT',
                                       style: TextStyle(
                                         fontSize: 10,
@@ -1002,9 +1003,9 @@ class _ProfileTab extends StatelessWidget {
                                         color: Color(0xFF64748B),
                                       ),
                                     ),
-                                    SizedBox(height: 4),
+                                    const SizedBox(height: 4),
                                     Text(
-                                      'B 1234 ABC',
+                                      auth.platNomor ?? '-',
                                       style: TextStyle(
                                         fontSize: 14,
                                         fontWeight: FontWeight.bold,
@@ -1025,8 +1026,8 @@ class _ProfileTab extends StatelessWidget {
                                 ),
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: const [
-                                    Text(
+                                  children: [
+                                    const Text(
                                       'JENIS KENDARAAN',
                                       style: TextStyle(
                                         fontSize: 10,
@@ -1034,9 +1035,9 @@ class _ProfileTab extends StatelessWidget {
                                         color: Color(0xFF64748B),
                                       ),
                                     ),
-                                    SizedBox(height: 4),
+                                    const SizedBox(height: 4),
                                     Text(
-                                      'Motor',
+                                      auth.jenisKendaraan ?? '-',
                                       style: TextStyle(
                                         fontSize: 14,
                                         fontWeight: FontWeight.bold,

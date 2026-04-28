@@ -14,6 +14,12 @@ class AuthProvider extends ChangeNotifier {
   bool _isBlacklisted = false;
   String _blacklistReason = "";
 
+  String? _nama;
+  String? _email;
+  String? _nim;
+  String? _platNomor;
+  String? _jenisKendaraan;
+
   AuthStatus get status => _status;
   String? get errorMessage => _errorMessage;
   int? get idRole => _idRole;
@@ -21,6 +27,12 @@ class AuthProvider extends ChangeNotifier {
   bool get isBlacklisted => _isBlacklisted;
   String get blacklistReason => _blacklistReason;
   bool get isAuthenticated => _status == AuthStatus.authenticated;
+  
+  String? get nama => _nama;
+  String? get email => _email;
+  String? get nim => _nim;
+  String? get platNomor => _platNomor;
+  String? get jenisKendaraan => _jenisKendaraan;
 
   /// Simulasi data user (Bisa diubah untuk testing)
   void setMockStatus({int penalty = 0, bool blacklisted = false, String reason = ""}) {
@@ -38,6 +50,7 @@ class AuthProvider extends ChangeNotifier {
     final token = await _authService.getToken();
     if (token != null && !JwtDecoder.isExpired(token)) {
       _extractRole(token);
+      await _loadUserData();
       _status = AuthStatus.authenticated;
     } else {
       _status = AuthStatus.unauthenticated;
@@ -54,6 +67,7 @@ class AuthProvider extends ChangeNotifier {
     try {
       final token = await _authService.login(email, password);
       _extractRole(token);
+      await _loadUserData();
       _status = AuthStatus.authenticated;
       notifyListeners();
       return true;
@@ -65,13 +79,13 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
-  Future<bool> register(String email, String password) async {
+  Future<bool> register(String nama, String nim, String email, String password, String platNomor, String jenisKendaraan) async {
     _status = AuthStatus.loading;
     _errorMessage = null;
     notifyListeners();
 
     try {
-      await _authService.register(email, password);
+      await _authService.register(nama, nim, email, password, platNomor, jenisKendaraan);
       _status = AuthStatus.unauthenticated;
       notifyListeners();
       return true;
@@ -81,6 +95,15 @@ class AuthProvider extends ChangeNotifier {
       notifyListeners();
       return false;
     }
+  }
+
+  Future<void> _loadUserData() async {
+    final data = await _authService.getUserData();
+    _nama = data['nama'];
+    _email = data['email'];
+    _nim = data['nim'];
+    _platNomor = data['plat_nomor'];
+    _jenisKendaraan = data['jenis_kendaraan'];
   }
 
   void _extractRole(String token) {
@@ -103,6 +126,11 @@ class AuthProvider extends ChangeNotifier {
   Future<void> logout() async {
     await _authService.logout();
     _idRole = null;
+    _nama = null;
+    _email = null;
+    _nim = null;
+    _platNomor = null;
+    _jenisKendaraan = null;
     _status = AuthStatus.unauthenticated;
     notifyListeners();
   }

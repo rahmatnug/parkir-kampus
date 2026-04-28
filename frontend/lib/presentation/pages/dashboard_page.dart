@@ -133,8 +133,8 @@ class _Sidebar extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text('Admin Parkir',
-                            style: TextStyle(fontSize: 11,
+                        Text(auth.nama ?? 'Admin Parkir',
+                            style: const TextStyle(fontSize: 11,
                                 fontWeight: FontWeight.w600, color: kText),
                             overflow: TextOverflow.ellipsis),
                         GestureDetector(

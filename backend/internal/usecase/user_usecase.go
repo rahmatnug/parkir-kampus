@@ -2,6 +2,7 @@ package usecase
 
 import (
 	"errors"
+	"strings"
 
 	"github.com/rahmatnug/parkir-kampus-backend/internal/domain"
 	"github.com/rahmatnug/parkir-kampus-backend/pkg/jwt"
@@ -19,7 +20,7 @@ func NewUserUsecase(repo domain.UserRepository) domain.UserUsecase {
 	}
 }
 
-func (u *userUsecase) Register(email, password string) (*domain.User, error) {
+func (u *userUsecase) Register(nama, nim, email, password, platNomor, jenisKendaraan string) (*domain.User, error) {
 	existingUser, err := u.userRepo.FindByEmail(email)
 	if err != nil {
 		return nil, err
@@ -37,8 +38,18 @@ func (u *userUsecase) Register(email, password string) (*domain.User, error) {
 		Email:        email,
 		PasswordHash: string(hashedPassword),
 		RoleID:       3, // Default to mahasiswa for open registration
-		Nama:         "User Baru",
+		Nama:         nama,
+		Nim:          nim,
 		Status:       "active",
+	}
+
+	if platNomor != "" && jenisKendaraan != "" {
+		user.Kendaraans = []domain.Kendaraan{
+			{
+				NomorPolisi:    platNomor,
+				JenisKendaraan: strings.ToLower(jenisKendaraan),
+			},
+		}
 	}
 
 	err = u.userRepo.Create(user)
@@ -49,27 +60,27 @@ func (u *userUsecase) Register(email, password string) (*domain.User, error) {
 	return user, nil
 }
 
-func (u *userUsecase) Login(email, password string) (string, error) {
+func (u *userUsecase) Login(email, password string) (string, *domain.User, error) {
 	user, err := u.userRepo.FindByEmail(email)
 	if err != nil {
-		return "", err
+		return "", nil, err
 	}
 	if user == nil {
-		return "", errors.New("invalid email or password")
+		return "", nil, errors.New("invalid email or password")
 	}
 
 	err = bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(password))
 	if err != nil {
-		return "", errors.New("invalid email or password")
+		return "", nil, errors.New("invalid email or password")
 	}
 
 	// Generate JWT token
 	token, err := jwt.GenerateToken(user.ID, user.RoleID)
 	if err != nil {
-		return "", err
+		return "", nil, err
 	}
 
-	return token, nil
+	return token, user, nil
 }
 
 func (u *userUsecase) ChangePassword(userID uint, currentPassword, newPassword string) error {

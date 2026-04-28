@@ -23,6 +23,8 @@ class _UserAuthPageState extends State<UserAuthPage>
   bool _isLoading = false;
 
   // Register fields
+  final _regNamaCtrl = TextEditingController();
+  final _regNimCtrl = TextEditingController();
   final _regEmailCtrl = TextEditingController();
   final _regPassCtrl = TextEditingController();
   final _regConfirmPassCtrl = TextEditingController();
@@ -42,6 +44,8 @@ class _UserAuthPageState extends State<UserAuthPage>
     _tabCtrl.dispose();
     _loginEmailCtrl.dispose();
     _loginPassCtrl.dispose();
+    _regNamaCtrl.dispose();
+    _regNimCtrl.dispose();
     _regEmailCtrl.dispose();
     _regPassCtrl.dispose();
     _regConfirmPassCtrl.dispose();
@@ -79,7 +83,7 @@ class _UserAuthPageState extends State<UserAuthPage>
   }
 
   Future<void> _handleRegister() async {
-    if (_regEmailCtrl.text.isEmpty || _regPassCtrl.text.isEmpty || _regConfirmPassCtrl.text.isEmpty) {
+    if (_regNamaCtrl.text.isEmpty || _regNimCtrl.text.isEmpty || _regEmailCtrl.text.isEmpty || _regPassCtrl.text.isEmpty || _regConfirmPassCtrl.text.isEmpty) {
       _showSnack('Semua kolom wajib diisi');
       return;
     }
@@ -90,8 +94,12 @@ class _UserAuthPageState extends State<UserAuthPage>
     setState(() => _isLoading = true);
     try {
       bool success = await context.read<AuthProvider>().register(
+            _regNamaCtrl.text.trim(),
+            _regNimCtrl.text.trim(),
             _regEmailCtrl.text.trim(),
             _regPassCtrl.text,
+            _platCtrl.text.trim(),
+            _jenisKendaraan,
           );
       if (success) {
         _showSnack('Registrasi berhasil! Silakan login.');
@@ -401,6 +409,24 @@ class _UserAuthPageState extends State<UserAuthPage>
       key: const ValueKey('register'),
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        const _FieldLabel(label: 'NAMA LENGKAP'),
+        const SizedBox(height: 8),
+        _AuthField(
+          controller: _regNamaCtrl,
+          hint: 'e.g. Budi Santoso',
+          prefixIcon: Icons.badge_outlined,
+        ),
+        const SizedBox(height: 16),
+
+        const _FieldLabel(label: 'NIM / NIP'),
+        const SizedBox(height: 8),
+        _AuthField(
+          controller: _regNimCtrl,
+          hint: 'e.g. 21004567',
+          prefixIcon: Icons.assignment_ind_outlined,
+        ),
+        const SizedBox(height: 16),
+
         const _FieldLabel(label: 'EMAIL KAMPUS'),
         const SizedBox(height: 8),
         _AuthField(
@@ -497,7 +523,7 @@ class _UserAuthPageState extends State<UserAuthPage>
                         setState(() => _jenisKendaraan = v ?? ''),
                     items: ['Motor', 'Mobil']
                         .map((e) => DropdownMenuItem(
-                              value: e,
+                              value: e.toLowerCase(),
                               child: Text(e),
                             ))
                         .toList(),

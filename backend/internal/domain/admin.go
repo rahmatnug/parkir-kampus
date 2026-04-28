@@ -15,6 +15,7 @@ type AdminUserItem struct {
 	ID        uint      `json:"id"`
 	Name      string    `json:"name"`
 	Email     string    `json:"email"`
+	Nim       string    `json:"nim"`
 	Role      string    `json:"role"`
 	Status    string    `json:"status"`
 	CreatedAt time.Time `json:"created_at"`

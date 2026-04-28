@@ -14,11 +14,13 @@ type User struct {
 	ID           uint      `json:"id_user" gorm:"primaryKey;column:id_user;autoIncrement"`
 	RoleID       uint      `json:"id_role" gorm:"column:id_role;type:smallint"`
 	Role         Role      `json:"role" gorm:"foreignKey:RoleID;references:ID"`
-	Nama         string    `json:"nama" gorm:"not null;column:nama;type:varchar(100)"`
-	Email        string    `json:"email" gorm:"uniqueIndex;not null;column:email;type:varchar(100)"`
-	PasswordHash string    `json:"-" gorm:"not null;column:password_hash;type:text"`
-	Status       string    `json:"status" gorm:"column:status;type:varchar(20);default:'active'"`
-	CreatedAt    time.Time `json:"created_at" gorm:"column:created_at;autoCreateTime"`
+	Nama         string      `json:"nama" gorm:"not null;column:nama;type:varchar(100)"`
+	Nim          string      `json:"nim" gorm:"column:nim;type:varchar(20)"`
+	Email        string      `json:"email" gorm:"uniqueIndex;not null;column:email;type:varchar(100)"`
+	PasswordHash string      `json:"-" gorm:"not null;column:password_hash;type:text"`
+	Status       string      `json:"status" gorm:"column:status;type:varchar(20);default:'active'"`
+	CreatedAt    time.Time   `json:"created_at" gorm:"column:created_at;autoCreateTime"`
+	Kendaraans   []Kendaraan `json:"kendaraans" gorm:"foreignKey:UserID"`
 }
 
 // UserRepository interface defines the methods that any repository must implement
@@ -31,7 +33,7 @@ type UserRepository interface {
 
 // UserUsecase interface defines the standard business logic methods
 type UserUsecase interface {
-	Register(email, password string) (*User, error)
-	Login(email, password string) (string, error)
+	Register(nama, nim, email, password, platNomor, jenisKendaraan string) (*User, error)
+	Login(email, password string) (string, *User, error)
 	ChangePassword(userID uint, currentPassword, newPassword string) error
 }

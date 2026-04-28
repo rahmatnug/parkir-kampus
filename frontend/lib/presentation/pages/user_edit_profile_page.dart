@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../providers/auth_provider.dart';
 
 class UserEditProfilePage extends StatefulWidget {
   const UserEditProfilePage({super.key});
@@ -10,6 +12,7 @@ class UserEditProfilePage extends StatefulWidget {
 class _UserEditProfilePageState extends State<UserEditProfilePage> {
   @override
   Widget build(BuildContext context) {
+    final auth = context.watch<AuthProvider>();
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
@@ -95,9 +98,9 @@ class _UserEditProfilePageState extends State<UserEditProfilePage> {
                 color: const Color(0xFFE2E8F0).withValues(alpha: 0.5),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: const Text(
-                'John Doe',
-                style: TextStyle(
+              child: Text(
+                auth.nama ?? '-',
+                style: const TextStyle(
                   fontSize: 16,
                   color: Color(0xFF0F172A),
                 ),
@@ -122,9 +125,9 @@ class _UserEditProfilePageState extends State<UserEditProfilePage> {
                 color: const Color(0xFFE2E8F0).withValues(alpha: 0.5),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: const Text(
-                'john.doe@univ.ac.id',
-                style: TextStyle(
+              child: Text(
+                auth.email ?? '-',
+                style: const TextStyle(
                   fontSize: 16,
                   color: Color(0xFF0F172A),
                 ),
@@ -156,9 +159,9 @@ class _UserEditProfilePageState extends State<UserEditProfilePage> {
                           color: const Color(0xFFE2E8F0).withValues(alpha: 0.5),
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        child: const Text(
-                          'B 1234 ABC',
-                          style: TextStyle(
+                        child: Text(
+                          auth.platNomor ?? '-',
+                          style: const TextStyle(
                             fontSize: 16,
                             color: Color(0xFF0F172A),
                           ),
@@ -189,12 +192,12 @@ class _UserEditProfilePageState extends State<UserEditProfilePage> {
                           color: const Color(0xFFE2E8F0).withValues(alpha: 0.5),
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        child: const Row(
+                        child: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             Text(
-                              'Motor',
-                              style: TextStyle(
+                              auth.jenisKendaraan ?? '-',
+                              style: const TextStyle(
                                 fontSize: 16,
                                 color: Color(0xFF0F172A),
                               ),

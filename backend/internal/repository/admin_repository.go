@@ -42,7 +42,7 @@ func (r *adminRepository) GetAllUsers() ([]domain.AdminUserItem, error) {
 	var users []domain.AdminUserItem
 
 	err := r.db.Table("users").
-		Select("users.id_user as id, users.nama as name, users.email, roles.nama_role as role, users.status, users.created_at").
+		Select("users.id_user as id, users.nama as name, users.email, users.nim, COALESCE(roles.nama_role, 'Unassigned') as role, users.status, users.created_at").
 		Joins("left join roles on roles.id_role = users.id_role").
 		Order("users.created_at DESC").
 		Scan(&users).Error
@@ -58,7 +58,7 @@ func (r *adminRepository) GetAllActivities() ([]domain.AdminActivityItem, error)
 	var activities []domain.AdminActivityItem
 
 	err := r.db.Table("transaksis").
-		Select("transaksis.id_transaksi, transaksis.id_user, users.nama as user_name, roles.nama_role as role, kendaraans.nomor_polisi, kendaraans.jenis_kendaraan as jenis, zona_parkirs.nama_zona as zona, transaksis.waktu_masuk, transaksis.waktu_keluar, transaksis.status").
+		Select("transaksis.id_transaksi, transaksis.id_user, users.nama as user_name, COALESCE(roles.nama_role, 'Unassigned') as role, kendaraans.nomor_polisi, kendaraans.jenis_kendaraan as jenis, zona_parkirs.nama_zona as zona, transaksis.waktu_masuk, transaksis.waktu_keluar, transaksis.status").
 		Joins("left join users on users.id_user = transaksis.id_user").
 		Joins("left join roles on roles.id_role = users.id_role").
 		Joins("left join kendaraans on kendaraans.id_kendaraan = transaksis.id_kendaraan").
@@ -97,7 +97,7 @@ func (r *adminRepository) GetBlacklistedUsers() ([]domain.BlacklistItem, error) 
 	var items []domain.BlacklistItem
 
 	err := r.db.Table("penaltis").
-		Select("penaltis.id_user as user_id, users.nama as name, users.email, roles.nama_role as role, SUM(penaltis.poin_penalti) as total_poin, COUNT(penaltis.id_penalti) as jumlah_kasus, MAX(penaltis.jenis_pelanggaran) as alasan_terakhir, MAX(kendaraans.nomor_polisi) as nomor_polisi, CASE WHEN SUM(penaltis.poin_penalti) >= 50 THEN 'Blocked' ELSE 'Suspended' END as status_hukuman").
+		Select("penaltis.id_user as user_id, users.nama as name, users.email, COALESCE(roles.nama_role, 'Unassigned') as role, SUM(penaltis.poin_penalti) as total_poin, COUNT(penaltis.id_penalti) as jumlah_kasus, MAX(penaltis.jenis_pelanggaran) as alasan_terakhir, MAX(kendaraans.nomor_polisi) as nomor_polisi, CASE WHEN SUM(penaltis.poin_penalti) >= 50 THEN 'Blocked' ELSE 'Suspended' END as status_hukuman").
 		Joins("left join users on users.id_user = penaltis.id_user").
 		Joins("left join roles on roles.id_role = users.id_role").
 		Joins("left join kendaraans on kendaraans.id_user = users.id_user").
