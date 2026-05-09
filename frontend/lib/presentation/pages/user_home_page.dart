@@ -2,53 +2,31 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import 'user_edit_profile_page.dart';
-import 'change_password_page.dart';
-
+import 'user/profile/change_password_user_page.dart';
 // ─── Data ──────────────────────────────────────────────────────────────────
-class _ParkingZone {
-  final String name;
-  final String label;
-  final Color color;
-  final Color bgColor;
-  final int available;
-  final int total;
+import '../providers/parking_provider.dart';
+import '../../data/models/parking_zone.dart';
 
-  const _ParkingZone({
-    required this.name,
-    required this.label,
-    required this.color,
-    required this.bgColor,
-    required this.available,
-    required this.total,
-  });
+// Helper colors
+Color _getZoneColor(String name) {
+  if (name.contains('A')) return const Color(0xFF16A34A);
+  if (name.contains('B')) return const Color(0xFFD97706);
+  if (name.contains('C')) return const Color(0xFFDC2626);
+  return const Color(0xFF2563EB); // default
 }
 
-const _zones = [
-  _ParkingZone(
-    name: 'Zone A',
-    label: 'A',
-    color: Color(0xFF16A34A),
-    bgColor: Color(0xFFDCFCE7),
-    available: 24,
-    total: 50,
-  ),
-  _ParkingZone(
-    name: 'Zone B',
-    label: 'B',
-    color: Color(0xFFD97706),
-    bgColor: Color(0xFFFEF3C7),
-    available: 8,
-    total: 40,
-  ),
-  _ParkingZone(
-    name: 'Zone C',
-    label: 'C',
-    color: Color(0xFFDC2626),
-    bgColor: Color(0xFFFFE4E6),
-    available: 0,
-    total: 30,
-  ),
-];
+Color _getZoneBgColor(String name) {
+  if (name.contains('A')) return const Color(0xFFDCFCE7);
+  if (name.contains('B')) return const Color(0xFFFEF3C7);
+  if (name.contains('C')) return const Color(0xFFFFE4E6);
+  return const Color(0xFFDBEAFE); // default
+}
+
+String _getZoneLabel(String name) {
+  final parts = name.split(' ');
+  if (parts.length > 1) return parts.last[0];
+  return name.isNotEmpty ? name[0] : '?';
+}
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
 class UserHomePage extends StatefulWidget {
@@ -60,6 +38,28 @@ class UserHomePage extends StatefulWidget {
 
 class _UserHomePageState extends State<UserHomePage> {
   int _selectedTab = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted) return;
+      final provider = context.read<ParkingProvider>();
+      final token = await context.read<AuthProvider>().getToken();
+      provider.fetchParkingStatus();
+      if (token != null) {
+        provider.initializeWebSocket(token);
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    // Dipanggil saat logout / app ditutup
+    final provider = context.read<ParkingProvider>();
+    provider.disconnectWebSocket();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -239,6 +239,10 @@ class _HomeTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final parkingProvider = context.watch<ParkingProvider>();
+    final zones = parkingProvider.zones;
+    final isLoading = parkingProvider.isLoading && zones.isEmpty;
+
     return SafeArea(
       child: SingleChildScrollView(
         child: Column(
@@ -314,21 +318,24 @@ class _HomeTab extends StatelessWidget {
                     ),
                   ),
                   // Zone markers
-                  Positioned(
-                    top: 55,
-                    left: 55,
-                    child: _ZoneMarker(zone: _zones[0]),
-                  ),
-                  Positioned(
-                    top: 85,
-                    right: 90,
-                    child: _ZoneMarker(zone: _zones[1]),
-                  ),
-                  Positioned(
-                    top: 115,
-                    right: 115,
-                    child: _ZoneMarker(zone: _zones[2]),
-                  ),
+                  if (zones.isNotEmpty)
+                    Positioned(
+                      top: 55,
+                      left: 55,
+                      child: _ZoneMarker(zone: zones[0]),
+                    ),
+                  if (zones.length > 1)
+                    Positioned(
+                      top: 85,
+                      right: 90,
+                      child: _ZoneMarker(zone: zones[1]),
+                    ),
+                  if (zones.length > 2)
+                    Positioned(
+                      top: 115,
+                      right: 115,
+                      child: _ZoneMarker(zone: zones[2]),
+                    ),
                 ],
               ),
             ),
@@ -354,13 +361,18 @@ class _HomeTab extends StatelessWidget {
             ),
             const SizedBox(height: 12),
 
-            // Zone Cards
-            for (final zone in _zones)
-              Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                child: _ZoneCard(zone: zone),
-              ),
+            if (isLoading)
+              const Center(child: CircularProgressIndicator())
+            else if (zones.isEmpty)
+              const Center(child: Text("Tidak ada zona yang tersedia."))
+            else
+              // Zone Cards
+              for (final zone in zones)
+                Padding(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                  child: _ZoneCard(zone: zone),
+                ),
             const SizedBox(height: 20),
           ],
         ),
@@ -370,20 +382,22 @@ class _HomeTab extends StatelessWidget {
 }
 
 class _ZoneMarker extends StatelessWidget {
-  final _ParkingZone zone;
+  final ParkingZone zone;
   const _ZoneMarker({required this.zone});
 
   @override
   Widget build(BuildContext context) {
+    final color = _getZoneColor(zone.nama);
+    final label = _getZoneLabel(zone.nama);
     return Container(
       width: 34,
       height: 34,
       decoration: BoxDecoration(
-        color: zone.color,
+        color: color,
         shape: BoxShape.circle,
         boxShadow: [
           BoxShadow(
-            color: zone.color.withValues(alpha: 0.4),
+            color: color.withValues(alpha: 0.4),
             blurRadius: 8,
             offset: const Offset(0, 3),
           ),
@@ -391,7 +405,7 @@ class _ZoneMarker extends StatelessWidget {
       ),
       child: Center(
         child: Text(
-          zone.label,
+          label,
           style: const TextStyle(
               color: Colors.white,
               fontSize: 13,
@@ -402,12 +416,58 @@ class _ZoneMarker extends StatelessWidget {
   }
 }
 
-class _ZoneCard extends StatelessWidget {
-  final _ParkingZone zone;
+class _ZoneCard extends StatefulWidget {
+  final ParkingZone zone;
   const _ZoneCard({required this.zone});
 
   @override
+  State<_ZoneCard> createState() => _ZoneCardState();
+}
+
+class _ZoneCardState extends State<_ZoneCard> with SingleTickerProviderStateMixin {
+  late AnimationController _animController;
+  late Animation<Color?> _colorAnimation;
+  int _lastAvailable = -1;
+
+  @override
+  void initState() {
+    super.initState();
+    _animController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 500),
+    );
+    _colorAnimation = ColorTween(
+      begin: const Color(0xFF64748B),
+      end: const Color(0xFF16A34A), // Highlight color
+    ).animate(CurvedAnimation(parent: _animController, curve: Curves.easeInOut));
+  }
+
+  @override
+  void didUpdateWidget(covariant _ZoneCard widget) {
+    super.didUpdateWidget(widget);
+    final currentAvailable = widget.zone.kapasitasMaksimal - widget.zone.terisiSaatIni;
+    if (_lastAvailable != -1 && currentAvailable != _lastAvailable) {
+      // Trigger animation
+      _animController.forward().then((_) => _animController.reverse());
+    }
+    _lastAvailable = currentAvailable;
+  }
+
+  @override
+  void dispose() {
+    _animController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final zone = widget.zone;
+    final available = zone.kapasitasMaksimal - zone.terisiSaatIni;
+    final total = zone.kapasitasMaksimal;
+    final label = _getZoneLabel(zone.nama);
+    final color = _getZoneColor(zone.nama);
+    final bgColor = _getZoneBgColor(zone.nama);
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
@@ -429,16 +489,16 @@ class _ZoneCard extends StatelessWidget {
             width: 44,
             height: 44,
             decoration: BoxDecoration(
-              color: zone.bgColor,
+              color: bgColor,
               borderRadius: BorderRadius.circular(10),
             ),
             child: Center(
               child: Text(
-                zone.label,
+                label,
                 style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
-                    color: zone.color),
+                    color: color),
               ),
             ),
           ),
@@ -447,21 +507,26 @@ class _ZoneCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(zone.name,
+                Text(zone.nama,
                     style: const TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.w600,
                         color: Color(0xFF0F172A))),
                 const SizedBox(height: 2),
-                Text(
-                  zone.available == 0
-                      ? 'Penuh'
-                      : '${zone.available} slot tersedia',
-                  style: TextStyle(
-                      fontSize: 12,
-                      color: zone.available == 0
-                          ? const Color(0xFFDC2626)
-                          : const Color(0xFF64748B)),
+                AnimatedBuilder(
+                  animation: _colorAnimation,
+                  builder: (context, child) {
+                    return Text(
+                      available <= 0
+                          ? 'Penuh'
+                          : '$available slot tersedia',
+                      style: TextStyle(
+                          fontSize: 12,
+                          color: available <= 0
+                              ? const Color(0xFFDC2626)
+                              : _colorAnimation.value),
+                    );
+                  }
                 ),
               ],
             ),
@@ -470,23 +535,31 @@ class _ZoneCard extends StatelessWidget {
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              Text(
-                '${zone.available}/${zone.total}',
-                style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.bold,
-                    color: zone.color),
+              AnimatedBuilder(
+                animation: _colorAnimation,
+                builder: (context, child) {
+                  return Text(
+                    '$available/$total',
+                    style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                        color: _animController.isAnimating ? _colorAnimation.value : color),
+                  );
+                }
               ),
               const SizedBox(height: 4),
               SizedBox(
                 width: 60,
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(4),
-                  child: LinearProgressIndicator(
-                    value: zone.available / zone.total,
-                    minHeight: 5,
-                    backgroundColor: const Color(0xFFE2E8F0),
-                    valueColor: AlwaysStoppedAnimation<Color>(zone.color),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 300),
+                    child: LinearProgressIndicator(
+                      value: total > 0 ? (available / total) : 0,
+                      minHeight: 5,
+                      backgroundColor: const Color(0xFFE2E8F0),
+                      valueColor: AlwaysStoppedAnimation<Color>(color),
+                    ),
                   ),
                 ),
               ),
@@ -1082,7 +1155,7 @@ class _ProfileTab extends StatelessWidget {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (_) => const ChangePasswordPage(),
+                          builder: (_) => const ChangePasswordUserPage(),
                         ),
                       );
                     },

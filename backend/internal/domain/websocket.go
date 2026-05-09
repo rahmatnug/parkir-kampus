@@ -48,3 +48,11 @@ type SystemAlertData struct {
 	Message string `json:"message"`
 	Gateway string `json:"gateway"`
 }
+
+// WSHub defines the contract for WebSocket broadcasts
+type WSHub interface {
+	NotifySlotUpdate(data SlotUpdateData)
+	NotifyQueuePop(userID uint, data QueuePopData)
+	NotifySystemAlert(data SystemAlertData)
+}
+

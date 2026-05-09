@@ -1,22 +1,41 @@
 import 'dart:async';
 import 'dart:convert';
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import '../../data/models/parking_zone.dart';
 import '../../data/services/parking_repository.dart';
 import '../../data/services/websocket_service.dart';
 import '../../core/network/api_client.dart';
 
+enum ScanStatus { idle, loading, success, zoneFull, error }
+
 class ParkingProvider extends ChangeNotifier {
   final ParkingRepository _repository = ParkingRepository();
   final WebSocketService _wsService = WebSocketService();
+  final ApiClient _apiClient = ApiClient();
 
   List<ParkingZone> _zones = [];
   bool _isLoading = false;
   String? _error;
 
+  // Scan state
+  ScanStatus _scanStatus = ScanStatus.idle;
+  String? _scanErrorMessage;
+  String? _scanErrorCode;
+  String? _assignedSlot;
+  String? _assignedZone;
+  int? _assignedTransaksiID;
+
   List<ParkingZone> get zones => _zones;
   bool get isLoading => _isLoading;
   String? get error => _error;
+
+  ScanStatus get scanStatus => _scanStatus;
+  String? get scanErrorMessage => _scanErrorMessage;
+  String? get scanErrorCode => _scanErrorCode;
+  String? get assignedSlot => _assignedSlot;
+  String? get assignedZone => _assignedZone;
+  int? get assignedTransaksiID => _assignedTransaksiID;
 
   StreamSubscription? _wsSubscription;
   String? _currentToken;
@@ -36,6 +55,89 @@ class ParkingProvider extends ChangeNotifier {
     }
   }
 
+  /// Process a QR code scan by calling POST /api/v1/parking/scan
+  Future<void> scanQR(String qrCode) async {
+    _scanStatus = ScanStatus.loading;
+    _scanErrorMessage = null;
+    _scanErrorCode = null;
+    _assignedSlot = null;
+    _assignedZone = null;
+    notifyListeners();
+
+    try {
+      final response = await _apiClient.dio.post(
+        '/api/v1/parking/scan',
+        data: {'qr_code': qrCode},
+      );
+
+      if (response.statusCode == 200) {
+        final data = response.data['data'];
+        _assignedSlot = data['nomor_slot'];
+        _assignedZone = data['nama_zona'];
+        _assignedTransaksiID = data['id_transaksi'];
+        _scanStatus = ScanStatus.success;
+      }
+    } catch (e) {
+      if (e is DioException && e.response != null) {
+        final responseData = e.response!.data;
+        _scanErrorCode = responseData['error_code'] ?? 'UNKNOWN';
+        _scanErrorMessage = responseData['message'] ?? 'Terjadi kesalahan';
+
+        if (_scanErrorCode == 'ZONE_FULL') {
+          _scanStatus = ScanStatus.zoneFull;
+        } else {
+          _scanStatus = ScanStatus.error;
+        }
+      } else {
+        _scanErrorCode = 'NETWORK_ERROR';
+        _scanErrorMessage = 'Gagal terhubung ke server';
+        _scanStatus = ScanStatus.error;
+      }
+    }
+
+    notifyListeners();
+  }
+
+  /// Process parking exit by calling POST /api/v1/parking/exit
+  Future<Map<String, dynamic>> exitParking() async {
+    _isLoading = true;
+    _error = null;
+    notifyListeners();
+
+    try {
+      final response = await _apiClient.dio.post('/api/v1/parking/exit');
+      
+      if (response.statusCode == 200) {
+        final data = response.data['data'];
+        // Clear local active transaction state so user can scan again
+        resetScanState();
+        return {'success': true, 'data': data};
+      }
+      return {'success': false, 'message': 'Gagal memproses keluar'};
+    } catch (e) {
+      String errMsg = 'Terjadi kesalahan jaringan';
+      if (e is DioException && e.response != null) {
+        errMsg = e.response!.data['message'] ?? 'Terjadi kesalahan';
+      }
+      _error = errMsg;
+      return {'success': false, 'message': errMsg};
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  /// Reset scan state (e.g., when user re-opens scanner)
+  void resetScanState() {
+    _scanStatus = ScanStatus.idle;
+    _scanErrorMessage = null;
+    _scanErrorCode = null;
+    _assignedSlot = null;
+    _assignedZone = null;
+    _assignedTransaksiID = null;
+    notifyListeners();
+  }
+
   void initializeWebSocket(String token) {
     _currentToken = token;
     _connectWs();
@@ -51,11 +153,24 @@ class ParkingProvider extends ChangeNotifier {
         try {
           final data = jsonDecode(message);
           if (data['event'] == 'SLOT_UPDATE') {
-            // Update the UI capacity
-            // Assuming data['data'] contains updated zone info or we can simply refetch
-            // For now, we will just call fetchParkingStatus() for simplicity when SLOT_UPDATE is received
-            // Or if data contains the specific capacity, we update it in memory.
-            fetchParkingStatus();
+            final payload = data['data'];
+            if (payload != null) {
+              final idZona = payload['id_zona'].toString();
+              final tersedia = payload['tersedia'] as int;
+              final kapasitas = payload['kapasitas'] as int;
+              final terisi = kapasitas - tersedia;
+              
+              // Temukan zona dan update state secara lokal
+              final index = _zones.indexWhere((z) => z.id == idZona);
+              if (index != -1) {
+                _zones[index] = _zones[index].copyWith(
+                  terisiSaatIni: terisi,
+                );
+                notifyListeners();
+              } else {
+                fetchParkingStatus();
+              }
+            }
           } else if (data['event'] == 'QUEUE_POP') {
             final context = navigatorKey.currentContext;
             if (context != null) {
@@ -97,7 +212,6 @@ class ParkingProvider extends ChangeNotifier {
           "WebSocket disconnected. Attempting to reconnect in 5 seconds...",
         );
         _wsService.disconnect();
-        // Handle Phantom Queue: sinkronisasi state kembali.
         Future.delayed(const Duration(seconds: 5), () {
           _connectWs();
           fetchParkingStatus();
@@ -109,10 +223,16 @@ class ParkingProvider extends ChangeNotifier {
     );
   }
 
+  void disconnectWebSocket() {
+    _wsSubscription?.cancel();
+    _wsSubscription = null;
+    _wsService.disconnect();
+    _currentToken = null;
+  }
+
   @override
   void dispose() {
-    _wsSubscription?.cancel();
-    _wsService.disconnect();
+    disconnectWebSocket();
     super.dispose();
   }
 }

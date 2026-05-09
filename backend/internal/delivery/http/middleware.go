@@ -43,3 +43,32 @@ func AuthMiddleware() gin.HandlerFunc {
 		c.Next()
 	}
 }
+
+// AuthAdminMiddleware ensures the authenticated user has admin role (id_role == 1).
+// Must be used AFTER AuthMiddleware so that "id_role" is already set in the context.
+func AuthAdminMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		idRole, exists := c.Get("id_role")
+		if !exists {
+			c.JSON(http.StatusForbidden, gin.H{"error": "Role information not found"})
+			c.Abort()
+			return
+		}
+
+		// id_role is stored as uint in AuthMiddleware via claims.IDRole
+		roleID, ok := idRole.(uint)
+		if !ok {
+			c.JSON(http.StatusForbidden, gin.H{"error": "Invalid role format"})
+			c.Abort()
+			return
+		}
+
+		if roleID != 1 {
+			c.JSON(http.StatusForbidden, gin.H{"error": "Access denied: admin role required"})
+			c.Abort()
+			return
+		}
+
+		c.Next()
+	}
+}

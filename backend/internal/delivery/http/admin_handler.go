@@ -17,7 +17,9 @@ func NewAdminHandler(r *gin.Engine, us domain.AdminUsecase) {
 		AdminUsecase: us,
 	}
 
+	// All admin endpoints are protected by AuthMiddleware + AuthAdminMiddleware
 	adminRoutes := r.Group("/api/admin")
+	adminRoutes.Use(AuthMiddleware(), AuthAdminMiddleware())
 	{
 		adminRoutes.GET("/dashboard", handler.GetDashboard)
 		adminRoutes.GET("/users", handler.GetUsers)
@@ -28,8 +30,21 @@ func NewAdminHandler(r *gin.Engine, us domain.AdminUsecase) {
 		adminRoutes.POST("/activities/:id/force-exit", handler.ForceExitActivity)
 		adminRoutes.POST("/users/:id/penalty", handler.AddPenalty)
 		adminRoutes.DELETE("/users/:id/penalty", handler.RemovePenalty)
+
+		// Zone CRUD
+		adminRoutes.POST("/zones", handler.CreateZone)
+		adminRoutes.GET("/zones", handler.GetAllZones)
+		adminRoutes.PUT("/zones/:id", handler.UpdateZone)
+		adminRoutes.DELETE("/zones/:id", handler.DeleteZone)
+
+		// Slot CRUD
+		adminRoutes.POST("/slots", handler.CreateSlot)
+		adminRoutes.GET("/zones/:id/slots", handler.GetSlotsByZone)
+		adminRoutes.DELETE("/slots/:id", handler.DeleteSlot)
 	}
 }
+
+// ─── Existing Handlers ──────────────────────────────────────────────────────
 
 func (h *AdminHandler) GetDashboard(c *gin.Context) {
 	data, err := h.AdminUsecase.GetDashboardData()
@@ -170,3 +185,133 @@ func (h *AdminHandler) RemovePenalty(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"status": "success", "message": "Penalti berhasil dihapus"})
 }
 
+// ─── Zone Handlers ──────────────────────────────────────────────────────────
+
+// CreateZone handles POST /api/admin/zones
+func (h *AdminHandler) CreateZone(c *gin.Context) {
+	var input struct {
+		NamaZona  string `json:"nama_zona" binding:"required"`
+		Deskripsi string `json:"deskripsi"`
+		Kapasitas int    `json:"kapasitas" binding:"required,gt=0"`
+	}
+	if err := c.ShouldBindJSON(&input); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"status": "error", "message": err.Error()})
+		return
+	}
+
+	if err := h.AdminUsecase.CreateZone(input.NamaZona, input.Deskripsi, input.Kapasitas); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"status": "error", "message": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusCreated, gin.H{"status": "success", "message": "Zona berhasil dibuat"})
+}
+
+// GetAllZones handles GET /api/admin/zones
+func (h *AdminHandler) GetAllZones(c *gin.Context) {
+	data, err := h.AdminUsecase.GetAllZones()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"zones": data})
+}
+
+// UpdateZone handles PUT /api/admin/zones/:id
+func (h *AdminHandler) UpdateZone(c *gin.Context) {
+	idStr := c.Param("id")
+	id, err := strconv.ParseUint(idStr, 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"status": "error", "message": "ID zona tidak valid"})
+		return
+	}
+
+	var input struct {
+		NamaZona  string `json:"nama_zona" binding:"required"`
+		Deskripsi string `json:"deskripsi"`
+		Kapasitas int    `json:"kapasitas" binding:"required,gt=0"`
+	}
+	if err := c.ShouldBindJSON(&input); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"status": "error", "message": err.Error()})
+		return
+	}
+
+	if err := h.AdminUsecase.UpdateZone(uint(id), input.NamaZona, input.Deskripsi, input.Kapasitas); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"status": "error", "message": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"status": "success", "message": "Zona berhasil diperbarui"})
+}
+
+// DeleteZone handles DELETE /api/admin/zones/:id
+func (h *AdminHandler) DeleteZone(c *gin.Context) {
+	idStr := c.Param("id")
+	id, err := strconv.ParseUint(idStr, 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"status": "error", "message": "ID zona tidak valid"})
+		return
+	}
+
+	if err := h.AdminUsecase.DeleteZone(uint(id)); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"status": "error", "message": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"status": "success", "message": "Zona dan semua slot-nya berhasil dihapus"})
+}
+
+// ─── Slot Handlers ──────────────────────────────────────────────────────────
+
+// CreateSlot handles POST /api/admin/slots
+func (h *AdminHandler) CreateSlot(c *gin.Context) {
+	var input struct {
+		ZonaID    uint   `json:"id_zona" binding:"required"`
+		NomorSlot string `json:"nomor_slot" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&input); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"status": "error", "message": err.Error()})
+		return
+	}
+
+	if err := h.AdminUsecase.CreateSlot(input.ZonaID, input.NomorSlot); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"status": "error", "message": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusCreated, gin.H{"status": "success", "message": "Slot berhasil dibuat"})
+}
+
+// GetSlotsByZone handles GET /api/admin/zones/:id/slots
+func (h *AdminHandler) GetSlotsByZone(c *gin.Context) {
+	idStr := c.Param("id")
+	id, err := strconv.ParseUint(idStr, 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"status": "error", "message": "ID zona tidak valid"})
+		return
+	}
+
+	data, err := h.AdminUsecase.GetSlotsByZone(uint(id))
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"slots": data})
+}
+
+// DeleteSlot handles DELETE /api/admin/slots/:id
+func (h *AdminHandler) DeleteSlot(c *gin.Context) {
+	idStr := c.Param("id")
+	id, err := strconv.ParseUint(idStr, 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"status": "error", "message": "ID slot tidak valid"})
+		return
+	}
+
+	if err := h.AdminUsecase.DeleteSlot(uint(id)); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"status": "error", "message": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"status": "success", "message": "Slot berhasil dihapus"})
+}

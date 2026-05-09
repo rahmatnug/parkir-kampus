@@ -2,6 +2,7 @@ package http
 
 import (
 	"net/http"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/rahmatnug/parkir-kampus-backend/internal/domain"
@@ -21,6 +22,14 @@ func NewParkingHandler(r *gin.Engine, us domain.ParkingUsecase) {
 	{
 		parking.POST("/tap-in", handler.TapIn)
 		parking.POST("/tap-out", handler.TapOut)
+	}
+
+	// User-facing scan endpoint (v1)
+	scan := r.Group("/api/v1/parking")
+	scan.Use(AuthMiddleware())
+	{
+		scan.POST("/scan", handler.ScanQR)
+		scan.POST("/exit", handler.ExitParking)
 	}
 }
 
@@ -79,3 +88,93 @@ func (h *ParkingHandler) TapOut(c *gin.Context) {
 		"data":    tx,
 	})
 }
+
+// ScanQR handles POST /api/v1/parking/scan
+// Payload: { "qr_code": "ZONE-B" }
+func (h *ParkingHandler) ScanQR(c *gin.Context) {
+	var input struct {
+		QRCode string `json:"qr_code" binding:"required"`
+	}
+
+	if err := c.ShouldBindJSON(&input); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"status":     "error",
+			"error_code": "INVALID_INPUT",
+			"message":    "QR code diperlukan",
+		})
+		return
+	}
+
+	userID := c.MustGet("id_user").(uint)
+
+	result, err := h.Usecase.ProcessParkingEntry(userID, input.QRCode)
+	if err != nil {
+		errMsg := err.Error()
+		statusCode := http.StatusInternalServerError
+		errCode := "SERVER_ERROR"
+
+		if strings.HasPrefix(errMsg, "ZONE_FULL:") {
+			statusCode = http.StatusConflict
+			errCode = "ZONE_FULL"
+		} else if strings.HasPrefix(errMsg, "BLACKLISTED:") {
+			statusCode = http.StatusForbidden
+			errCode = "BLACKLISTED"
+		} else if strings.HasPrefix(errMsg, "ALREADY_PARKED:") {
+			statusCode = http.StatusConflict
+			errCode = "ALREADY_PARKED"
+		} else if strings.HasPrefix(errMsg, "INVALID_ZONE:") {
+			statusCode = http.StatusNotFound
+			errCode = "INVALID_ZONE"
+		} else if strings.HasPrefix(errMsg, "ZONE_INACTIVE:") {
+			statusCode = http.StatusForbidden
+			errCode = "ZONE_INACTIVE"
+		} else if strings.HasPrefix(errMsg, "NO_VEHICLE:") {
+			statusCode = http.StatusBadRequest
+			errCode = "NO_VEHICLE"
+		}
+
+		c.JSON(statusCode, gin.H{
+			"status":     "error",
+			"error_code": errCode,
+			"message":    errMsg,
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"status":  "success",
+		"message": "Berhasil masuk parkir",
+		"data":    result,
+	})
+}
+
+// ExitParking handles POST /api/v1/parking/exit
+func (h *ParkingHandler) ExitParking(c *gin.Context) {
+	userID := c.MustGet("id_user").(uint)
+
+	tx, err := h.Usecase.ProcessParkingExit(userID)
+	if err != nil {
+		errMsg := err.Error()
+		statusCode := http.StatusInternalServerError
+		errCode := "SERVER_ERROR"
+
+		if strings.HasPrefix(errMsg, "NO_ACTIVE_SESSION:") {
+			statusCode = http.StatusBadRequest
+			errCode = "NO_ACTIVE_SESSION"
+		}
+
+		c.JSON(statusCode, gin.H{
+			"status":     "error",
+			"error_code": errCode,
+			"message":    errMsg,
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"status":  "success",
+		"message": "Berhasil keluar parkir",
+		"data":    tx,
+	})
+}
+

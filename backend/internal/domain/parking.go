@@ -94,6 +94,20 @@ type ParkingRepository interface {
 	CountAvailableSlots(zonaID uint) (int64, error)
 	CreatePenalti(p *Penalti) error
 	FindInParkTransactions() ([]Transaksi, error)
+	GetZoneByID(zonaID uint) (*ZonaParkir, error)
+	GetZoneByCode(code string) (*ZonaParkir, error)
+	GetUserKendaraan(userID uint) (*Kendaraan, error)
+	GetTotalPenaltyPoints(userID uint) (int, error)
+	BookSlotAndCreateTransaction(userID uint, kendaraanID uint, zonaID uint) (*Transaksi, *SlotParkir, error)
+	ReleaseSlotAndUpdateTransaction(userID uint) (*Transaksi, error)
+}
+
+// ParkingEntryResult holds the outcome of a successful scan entry
+type ParkingEntryResult struct {
+	TransaksiID uint   `json:"id_transaksi"`
+	NomorSlot   string `json:"nomor_slot"`
+	NamaZona    string `json:"nama_zona"`
+	Status      string `json:"status"`
 }
 
 // ParkingUsecase defines the business logic for parking
@@ -101,4 +115,6 @@ type ParkingUsecase interface {
 	TapIn(userID uint, kendaraanID uint, zonaID uint) (*Transaksi, string, error)
 	TapOut(userID uint) (*Transaksi, error)
 	AssignSlotFromWaitlist(zonaID uint) error
+	ProcessParkingEntry(userID uint, qrCode string) (*ParkingEntryResult, error)
+	ProcessParkingExit(userID uint) (*Transaksi, error)
 }

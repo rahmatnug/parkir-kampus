@@ -1,6 +1,10 @@
 package repository
 
 import (
+	"errors"
+	"fmt"
+	"time"
+
 	"github.com/rahmatnug/parkir-kampus-backend/internal/domain"
 	"gorm.io/gorm"
 )
@@ -75,9 +79,52 @@ func (r *adminRepository) GetAllActivities() ([]domain.AdminActivityItem, error)
 	return activities, nil
 }
 
-// DeleteUser removes a user by ID (also cascades to related data via DB constraints)
+// DeleteUser removes a user and ALL related child records inside a single transaction.
+// We manually delete child rows first to avoid FK constraint violations on databases
+// that do not have ON DELETE CASCADE configured.
 func (r *adminRepository) DeleteUser(userID uint) error {
-	return r.db.Delete(&domain.User{}, "id_user = ?", userID).Error
+	return r.db.Transaction(func(tx *gorm.DB) error {
+		// 1. Verify the user exists before attempting deletion
+		var user domain.User
+		if err := tx.First(&user, "id_user = ?", userID).Error; err != nil {
+			if err == gorm.ErrRecordNotFound {
+				return fmt.Errorf("user dengan ID %d tidak ditemukan", userID)
+			}
+			return err
+		}
+
+		// 2. Delete waiting_lists referencing this user
+		if err := tx.Where("id_user = ?", userID).Delete(&domain.WaitingList{}).Error; err != nil {
+			return fmt.Errorf("gagal hapus waiting list: %w", err)
+		}
+
+		// 3. Delete penaltis referencing this user
+		if err := tx.Where("id_user = ?", userID).Delete(&domain.Penalti{}).Error; err != nil {
+			return fmt.Errorf("gagal hapus penalti: %w", err)
+		}
+
+		// 4. Delete blacklists referencing this user
+		if err := tx.Where("id_user = ?", userID).Delete(&domain.Blacklist{}).Error; err != nil {
+			return fmt.Errorf("gagal hapus blacklist: %w", err)
+		}
+
+		// 5. Delete transaksis referencing this user
+		if err := tx.Where("id_user = ?", userID).Delete(&domain.Transaksi{}).Error; err != nil {
+			return fmt.Errorf("gagal hapus transaksi: %w", err)
+		}
+
+		// 6. Delete kendaraans referencing this user
+		if err := tx.Where("id_user = ?", userID).Delete(&domain.Kendaraan{}).Error; err != nil {
+			return fmt.Errorf("gagal hapus kendaraan: %w", err)
+		}
+
+		// 7. Finally delete the user itself
+		if err := tx.Delete(&domain.User{}, "id_user = ?", userID).Error; err != nil {
+			return fmt.Errorf("gagal hapus user: %w", err)
+		}
+
+		return nil
+	})
 }
 
 // UpdateUserRole changes the role of a user by looking up the role name
@@ -160,3 +207,135 @@ func (r *adminRepository) RemovePenalty(userID uint) error {
 	return r.db.Where("id_user = ?", userID).Delete(&domain.Penalti{}).Error
 }
 
+// HasActiveTransaction checks whether a user currently has a parking session
+// with status 'parkir'.
+func (r *adminRepository) HasActiveTransaction(userID uint) (bool, error) {
+	var count int64
+	err := r.db.Model(&domain.Transaksi{}).
+		Where("id_user = ? AND status = ?", userID, "parkir").
+		Count(&count).Error
+	return count > 0, err
+}
+
+// GetTotalPenaltyPoints returns the sum of all penalty points for a user.
+func (r *adminRepository) GetTotalPenaltyPoints(userID uint) (int, error) {
+	var total int
+	err := r.db.Model(&domain.Penalti{}).
+		Where("id_user = ?", userID).
+		Select("COALESCE(SUM(poin_penalti), 0)").
+		Row().Scan(&total)
+	return total, err
+}
+
+// CreateBlacklist inserts a new blacklist record.
+func (r *adminRepository) CreateBlacklist(userID uint, alasan string) error {
+	bl := domain.Blacklist{
+		UserID:       userID,
+		Alasan:       alasan,
+		TanggalMulai: time.Now(),
+		Status:       "active",
+	}
+	return r.db.Create(&bl).Error
+}
+
+// ─── Zone CRUD ──────────────────────────────────────────────────────────────
+
+func (r *adminRepository) CreateZone(zone *domain.ZonaParkir) error {
+	return r.db.Create(zone).Error
+}
+
+func (r *adminRepository) GetAllZones() ([]domain.ZoneWithSlots, error) {
+	var zones []domain.ZoneWithSlots
+
+	err := r.db.Table("zona_parkirs").
+		Select(`zona_parkirs.id_zona, zona_parkirs.nama_zona, zona_parkirs.deskripsi,
+			zona_parkirs.kapasitas, zona_parkirs.status,
+			COUNT(slot_parkirs.id_slot) as total_slots,
+			COUNT(CASE WHEN slot_parkirs.status = 'available' THEN 1 END) as available_slots`).
+		Joins("LEFT JOIN slot_parkirs ON slot_parkirs.id_zona = zona_parkirs.id_zona").
+		Group("zona_parkirs.id_zona, zona_parkirs.nama_zona, zona_parkirs.deskripsi, zona_parkirs.kapasitas, zona_parkirs.status").
+		Order("zona_parkirs.id_zona ASC").
+		Scan(&zones).Error
+
+	if err != nil {
+		return nil, err
+	}
+	return zones, nil
+}
+
+func (r *adminRepository) UpdateZone(zone *domain.ZonaParkir) error {
+	return r.db.Model(&domain.ZonaParkir{}).
+		Where("id_zona = ?", zone.IDZona).
+		Updates(map[string]interface{}{
+			"nama_zona": zone.NamaZona,
+			"deskripsi": zone.Deskripsi,
+			"kapasitas": zone.Kapasitas,
+		}).Error
+}
+
+// DeleteZone removes a zone and all its slots within a single DB transaction.
+func (r *adminRepository) DeleteZone(zonaID uint) error {
+	return r.db.Transaction(func(tx *gorm.DB) error {
+		// 1. Ensure no active transactions reference slots in this zone
+		var activeCount int64
+		tx.Table("transaksis").
+			Joins("JOIN slot_parkirs ON slot_parkirs.id_slot = transaksis.id_slot").
+			Where("slot_parkirs.id_zona = ? AND transaksis.status = ?", zonaID, "parkir").
+			Count(&activeCount)
+
+		if activeCount > 0 {
+			return fmt.Errorf("tidak bisa menghapus zona: masih ada %d kendaraan yang sedang parkir", activeCount)
+		}
+
+		// 2. Delete all slots belonging to this zone
+		if err := tx.Where("id_zona = ?", zonaID).Delete(&domain.SlotParkir{}).Error; err != nil {
+			return fmt.Errorf("gagal hapus slot di zona: %w", err)
+		}
+
+		// 3. Delete the zone
+		if err := tx.Delete(&domain.ZonaParkir{}, "id_zona = ?", zonaID).Error; err != nil {
+			return fmt.Errorf("gagal hapus zona: %w", err)
+		}
+
+		return nil
+	})
+}
+
+func (r *adminRepository) FindZoneByName(name string) (*domain.ZonaParkir, error) {
+	var zone domain.ZonaParkir
+	if err := r.db.Where("LOWER(nama_zona) = LOWER(?)", name).First(&zone).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return &zone, nil
+}
+
+// ─── Slot CRUD ──────────────────────────────────────────────────────────────
+
+func (r *adminRepository) CreateSlot(slot *domain.SlotParkir) error {
+	return r.db.Create(slot).Error
+}
+
+func (r *adminRepository) GetSlotsByZone(zonaID uint) ([]domain.SlotParkir, error) {
+	var slots []domain.SlotParkir
+	err := r.db.Where("id_zona = ?", zonaID).Order("nomor_slot ASC").Find(&slots).Error
+	return slots, err
+}
+
+func (r *adminRepository) DeleteSlot(slotID uint) error {
+	return r.db.Transaction(func(tx *gorm.DB) error {
+		// Ensure no active transaction on this slot
+		var activeCount int64
+		tx.Model(&domain.Transaksi{}).
+			Where("id_slot = ? AND status = ?", slotID, "parkir").
+			Count(&activeCount)
+
+		if activeCount > 0 {
+			return errors.New("tidak bisa menghapus slot: masih ada kendaraan yang parkir di slot ini")
+		}
+
+		return tx.Delete(&domain.SlotParkir{}, "id_slot = ?", slotID).Error
+	})
+}

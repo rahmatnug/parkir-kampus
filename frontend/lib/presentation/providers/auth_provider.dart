@@ -42,6 +42,11 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Get the currently stored token
+  Future<String?> getToken() async {
+    return await _authService.getToken();
+  }
+
   /// Check saved token and extract role on app launch
   Future<void> checkAuthStatus() async {
     _status = AuthStatus.loading;

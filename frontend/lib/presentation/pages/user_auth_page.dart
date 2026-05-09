@@ -474,7 +474,7 @@ class _UserAuthPageState extends State<UserAuthPage>
                 textCapitalization: TextCapitalization.characters,
                 style: const TextStyle(
                     fontSize: 13,
-                    color: Color(0xFF0F172A),
+                    color: Color.fromARGB(255, 255, 255, 255),
                     fontWeight: FontWeight.w500),
                 decoration: InputDecoration(
                   hintText: 'PLAT NOMOR',

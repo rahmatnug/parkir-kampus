@@ -30,16 +30,16 @@ func main() {
 	reportRepo := repository.NewReportRepository(db)
 	parkingRepo := repository.NewParkingRepository(db)
 
-	// ─── Usecase layer ──────────────────────────────────────────────────
-	userUsecase := usecase.NewUserUsecase(userRepo)
-	adminUsecase := usecase.NewAdminUsecase(adminRepo)
-	reportUsecase := usecase.NewReportUsecase(reportRepo)
-	parkingUsecase := usecase.NewParkingUsecase(parkingRepo, userRepo)
-
 	// ─── WebSocket Hub ──────────────────────────────────────────────────
 	wsHub := deliveryWS.NewHub()
 	go wsHub.Run()
 	log.Println("WebSocket hub started")
+
+	// ─── Usecase layer ──────────────────────────────────────────────────
+	userUsecase := usecase.NewUserUsecase(userRepo)
+	adminUsecase := usecase.NewAdminUsecase(adminRepo)
+	reportUsecase := usecase.NewReportUsecase(reportRepo)
+	parkingUsecase := usecase.NewParkingUsecase(parkingRepo, userRepo, wsHub)
 
 	// ─── Cron Jobs ──────────────────────────────────────────────────────
 	cronJob := cron.NewCronJob(parkingRepo)

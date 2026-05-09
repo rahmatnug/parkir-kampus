@@ -1,6 +1,8 @@
 package repository
 
 import (
+	"time"
+
 	"github.com/rahmatnug/parkir-kampus-backend/internal/domain"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
@@ -74,3 +76,129 @@ func (r *parkingRepository) FindInParkTransactions() ([]domain.Transaksi, error)
 	err := r.db.Where("status = ?", "parkir").Find(&txs).Error
 	return txs, err
 }
+
+// GetZoneByID finds a zone by its ID
+func (r *parkingRepository) GetZoneByID(zonaID uint) (*domain.ZonaParkir, error) {
+	var zone domain.ZonaParkir
+	err := r.db.Where("id_zona = ?", zonaID).First(&zone).Error
+	if err != nil {
+		return nil, err
+	}
+	return &zone, nil
+}
+
+// GetZoneByCode finds a zone by its nama_zona (the code embedded in the QR).
+// Supports formats like "ZONE-A" -> looks for "Zone A", or direct name match.
+func (r *parkingRepository) GetZoneByCode(code string) (*domain.ZonaParkir, error) {
+	var zone domain.ZonaParkir
+	// Try exact match first, then case-insensitive
+	err := r.db.Where("LOWER(nama_zona) = LOWER(?)", code).First(&zone).Error
+	if err != nil {
+		return nil, err
+	}
+	return &zone, nil
+}
+
+// GetUserKendaraan returns the first registered vehicle for a user.
+func (r *parkingRepository) GetUserKendaraan(userID uint) (*domain.Kendaraan, error) {
+	var k domain.Kendaraan
+	err := r.db.Where("id_user = ?", userID).First(&k).Error
+	if err != nil {
+		return nil, err
+	}
+	return &k, nil
+}
+
+// GetTotalPenaltyPoints returns the cumulative penalty points for a user.
+func (r *parkingRepository) GetTotalPenaltyPoints(userID uint) (int, error) {
+	var total int
+	err := r.db.Model(&domain.Penalti{}).
+		Where("id_user = ?", userID).
+		Select("COALESCE(SUM(poin_penalti), 0)").
+		Row().Scan(&total)
+	return total, err
+}
+
+// BookSlotAndCreateTransaction atomically finds an available slot (with row lock),
+// marks it as occupied, and creates the parking transaction — all within a single
+// database transaction to prevent two users grabbing the same slot.
+func (r *parkingRepository) BookSlotAndCreateTransaction(userID uint, kendaraanID uint, zonaID uint) (*domain.Transaksi, *domain.SlotParkir, error) {
+	var resultTx domain.Transaksi
+	var resultSlot domain.SlotParkir
+
+	err := r.db.Transaction(func(tx *gorm.DB) error {
+		// 1. Lock the first available slot (SELECT ... FOR UPDATE SKIP LOCKED)
+		var slot domain.SlotParkir
+		if err := tx.Clauses(clause.Locking{
+			Strength: "UPDATE",
+			Options:  "SKIP LOCKED",
+		}).Where("id_zona = ? AND status = ?", zonaID, "available").
+			First(&slot).Error; err != nil {
+			return err // gorm.ErrRecordNotFound if zone is full
+		}
+
+		// 2. Mark the slot as occupied
+		if err := tx.Model(&domain.SlotParkir{}).
+			Where("id_slot = ?", slot.IDSlot).
+			Update("status", "occupied").Error; err != nil {
+			return err
+		}
+
+		// 3. Create the transaction record
+		transaksi := domain.Transaksi{
+			UserID:      userID,
+			KendaraanID: kendaraanID,
+			SlotID:      slot.IDSlot,
+			WaktuMasuk:  time.Now(),
+			Status:      "parkir",
+		}
+		if err := tx.Create(&transaksi).Error; err != nil {
+			return err
+		}
+
+		resultTx = transaksi
+		resultSlot = slot
+		return nil
+	})
+
+	if err != nil {
+		return nil, nil, err
+	}
+	return &resultTx, &resultSlot, nil
+}
+
+// ReleaseSlotAndUpdateTransaction automatically ends the parking transaction and frees the slot.
+func (r *parkingRepository) ReleaseSlotAndUpdateTransaction(userID uint) (*domain.Transaksi, error) {
+	var resultTx domain.Transaksi
+
+	err := r.db.Transaction(func(tx *gorm.DB) error {
+		// 1. Find the active transaction
+		if err := tx.Where("id_user = ? AND status = ?", userID, "parkir").First(&resultTx).Error; err != nil {
+			return err
+		}
+
+		// 2. Mark the slot as available
+		if err := tx.Model(&domain.SlotParkir{}).
+			Where("id_slot = ?", resultTx.SlotID).
+			Update("status", "available").Error; err != nil {
+			return err
+		}
+
+		// 3. Mark transaction as selesai and set waktu_keluar
+		now := time.Now()
+		resultTx.WaktuKeluar = &now
+		resultTx.Status = "selesai"
+
+		if err := tx.Save(&resultTx).Error; err != nil {
+			return err
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		return nil, err
+	}
+	return &resultTx, nil
+}
+

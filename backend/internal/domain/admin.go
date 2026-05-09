@@ -48,6 +48,17 @@ type BlacklistItem struct {
 	StatusHukuman  string `json:"status_hukuman"`
 }
 
+// ZoneWithSlots is a read-model returned when listing zones with their slot counts
+type ZoneWithSlots struct {
+	IDZona         uint   `json:"id_zona"`
+	NamaZona       string `json:"nama_zona"`
+	Deskripsi      string `json:"deskripsi"`
+	Kapasitas      int    `json:"kapasitas"`
+	Status         string `json:"status"`
+	TotalSlots     int    `json:"total_slots"`
+	AvailableSlots int    `json:"available_slots"`
+}
+
 // AdminRepository interface defines methods for admin data access
 type AdminRepository interface {
 	GetDashboardStats() (*DashboardStats, error)
@@ -59,6 +70,21 @@ type AdminRepository interface {
 	ForceExitActivity(activityID uint) error
 	AddPenalty(userID uint, poin int, keterangan string) error
 	RemovePenalty(userID uint) error
+	HasActiveTransaction(userID uint) (bool, error)
+	GetTotalPenaltyPoints(userID uint) (int, error)
+	CreateBlacklist(userID uint, alasan string) error
+
+	// Zone CRUD
+	CreateZone(zone *ZonaParkir) error
+	GetAllZones() ([]ZoneWithSlots, error)
+	UpdateZone(zone *ZonaParkir) error
+	DeleteZone(zonaID uint) error
+	FindZoneByName(name string) (*ZonaParkir, error)
+
+	// Slot CRUD
+	CreateSlot(slot *SlotParkir) error
+	GetSlotsByZone(zonaID uint) ([]SlotParkir, error)
+	DeleteSlot(slotID uint) error
 }
 
 // AdminUsecase interface defines standard business logic methods
@@ -72,4 +98,15 @@ type AdminUsecase interface {
 	ForceExitActivity(activityID uint) error
 	AddPenalty(userID uint, poin int, keterangan string) error
 	RemovePenalty(userID uint) error
+
+	// Zone CRUD
+	CreateZone(namaZona string, deskripsi string, kapasitas int) error
+	GetAllZones() ([]ZoneWithSlots, error)
+	UpdateZone(zonaID uint, namaZona string, deskripsi string, kapasitas int) error
+	DeleteZone(zonaID uint) error
+
+	// Slot CRUD
+	CreateSlot(zonaID uint, nomorSlot string) error
+	GetSlotsByZone(zonaID uint) ([]SlotParkir, error)
+	DeleteSlot(slotID uint) error
 }
