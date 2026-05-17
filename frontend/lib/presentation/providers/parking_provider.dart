@@ -22,12 +22,12 @@ class ParkingProvider extends ChangeNotifier {
   // Scan state
   ScanStatus _scanStatus = ScanStatus.idle;
   String? _scanErrorMessage;
-  String? _scanErrorCode;
-  String? _assignedSlot;
-  String? _assignedZone;
-  int? _assignedTransaksiID;
-  double? _assignedX;
-  double? _assignedY;
+  String? _scanErrorCode = null;
+  String? _assignedSlot = null;
+  String? _assignedZone = null;
+  int? _assignedTransaksiID = null;
+  double? _assignedX = null;
+  double? _assignedY = null;
 
   String? _platNomor;
   String? _jenisKendaraan;
@@ -47,8 +47,15 @@ class ParkingProvider extends ChangeNotifier {
   String? get platNomor => _platNomor;
   String? get jenisKendaraan => _jenisKendaraan;
 
+  /// True only when a scan has been confirmed AND slot data is populated
+  bool get hasActiveSession =>
+      _scanStatus == ScanStatus.success &&
+      _assignedSlot != null &&
+      _assignedZone != null;
+
   StreamSubscription? _wsSubscription;
   String? _currentToken;
+  int _wsReconnectDelay = 2;
 
   Future<void> checkVehicleData() async {
     final authService = AuthService();
@@ -69,10 +76,25 @@ class ParkingProvider extends ChangeNotifier {
         _assignedX = (data['x_coord'] as num?)?.toDouble() ?? 0.0;
         _assignedY = (data['y_coord'] as num?)?.toDouble() ?? 0.0;
         _scanStatus = ScanStatus.success;
-        notifyListeners();
+      } else {
+        // No active session — clear any stale dummy data
+        _assignedSlot = null;
+        _assignedZone = null;
+        _assignedTransaksiID = null;
+        _assignedX = null;
+        _assignedY = null;
+        if (_scanStatus == ScanStatus.success) _scanStatus = ScanStatus.idle;
       }
+      notifyListeners();
     } catch (e) {
-      // Ignore background errors
+      // On error (e.g. 404 no active session), clear stale state
+      _assignedSlot = null;
+      _assignedZone = null;
+      _assignedTransaksiID = null;
+      _assignedX = null;
+      _assignedY = null;
+      if (_scanStatus == ScanStatus.success) _scanStatus = ScanStatus.idle;
+      notifyListeners();
     }
   }
 
@@ -97,6 +119,19 @@ class ParkingProvider extends ChangeNotifier {
     }
   }
 
+  /// Read-only check for active parking session (does not mutate state)
+  Future<bool> _hasActiveSession() async {
+    try {
+      final response = await _apiClient.dio.get('/api/v1/parking/current');
+      if (response.statusCode == 200 && response.data['data'] != null) {
+        return true;
+      }
+    } catch (e) {
+      // Ignore – will be caught by the server-side guard anyway
+    }
+    return false;
+  }
+
   /// Process a QR code scan by calling POST /api/v1/parking/scan
   Future<void> scanQR(String qrCode) async {
     _scanStatus = ScanStatus.loading;
@@ -108,11 +143,21 @@ class ParkingProvider extends ChangeNotifier {
     _assignedY = null;
     notifyListeners();
 
+    // Guard 1: Check vehicle data
     await checkVehicleData();
     if (_platNomor == null || _jenisKendaraan == null || _platNomor!.isEmpty || _jenisKendaraan!.isEmpty) {
       _scanStatus = ScanStatus.error;
       _scanErrorCode = 'NO_VEHICLE';
-      _scanErrorMessage = "Anda belum mendaftarkan kendaraan. Silakan lengkapi profil kendaraan Anda.";
+      _scanErrorMessage = "Lengkapi profil kendaraan Anda terlebih dahulu.";
+      notifyListeners();
+      return;
+    }
+
+    // Guard 2: Check active session
+    if (await _hasActiveSession()) {
+      _scanStatus = ScanStatus.error;
+      _scanErrorCode = 'ALREADY_PARKED';
+      _scanErrorMessage = "Anda masih memiliki sesi parkir aktif. Silakan scan QR untuk keluar terlebih dahulu.";
       notifyListeners();
       return;
     }
@@ -197,6 +242,7 @@ class ParkingProvider extends ChangeNotifier {
 
   void initializeWebSocket(String token) {
     _currentToken = token;
+    _wsReconnectDelay = 2;
     _connectWs();
   }
 
@@ -207,6 +253,9 @@ class ParkingProvider extends ChangeNotifier {
 
     _wsSubscription = _wsService.stream?.listen(
       (message) {
+        // Reset delay on successful message received (indicates connection is healthy)
+        _wsReconnectDelay = 2;
+        
         try {
           final data = jsonDecode(message);
           if (data['event'] == 'SLOT_UPDATE') {
@@ -268,13 +317,16 @@ class ParkingProvider extends ChangeNotifier {
       },
       onDone: () {
         debugPrint(
-          "WebSocket disconnected. Attempting to reconnect in 5 seconds...",
+          "WebSocket disconnected. Attempting to reconnect in $_wsReconnectDelay seconds...",
         );
         _wsService.disconnect();
-        Future.delayed(const Duration(seconds: 5), () {
+        Future.delayed(Duration(seconds: _wsReconnectDelay), () {
           _connectWs();
           fetchParkingStatus();
         });
+        
+        // Exponential backoff logic
+        _wsReconnectDelay = (_wsReconnectDelay * 2).clamp(2, 32);
       },
       onError: (error) {
         debugPrint("WebSocket Error: $error");

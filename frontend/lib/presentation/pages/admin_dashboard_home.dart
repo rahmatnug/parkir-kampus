@@ -33,11 +33,13 @@ class _AdminDashboardHomeState extends State<AdminDashboardHome> {
     try {
       final stats = await _adminService.getDashboardStats();
       final acts  = await _adminService.getActivities();
-      if (mounted) setState(() {
+      if (mounted) {
+        setState(() {
         _stats      = stats;
         _activities = acts;
         _isLoading  = false;
       });
+      }
     } catch (e) {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -133,7 +135,7 @@ class _AdminDashboardHomeState extends State<AdminDashboardHome> {
                   iconColor: _kBlue,
                   label: 'Vehicles Parked',
                   value: '$active',
-                  badge: '${userCount} Reg Users', // reused badge slot
+                  badge: '$userCount Reg Users', // reused badge slot
                   badgeColor: _kGreen,
                 )),
                 const SizedBox(width: 16),
@@ -166,10 +168,10 @@ class _AdminDashboardHomeState extends State<AdminDashboardHome> {
                 Expanded(
                   flex: 5,
                   child: _ChartCard(
-                    title: 'Activity Timeline',
-                    badge: '● Peak: 85%',
+                    title: 'Activity Timeline (Today)',
+                    badge: 'Real-time',
                     badgeColor: _kBlue,
-                    child: const _LineChartWidget(),
+                    child: _LineChartWidget(activities: _activities),
                   ),
                 ),
               ],
@@ -401,19 +403,36 @@ class _Legend extends StatelessWidget {
 
 // ─── Simple Line Chart ────────────────────────────────────────────────────────
 class _LineChartWidget extends StatelessWidget {
-  const _LineChartWidget();
+  final List<dynamic> activities;
+  const _LineChartWidget({this.activities = const []});
 
   @override
   Widget build(BuildContext context) {
+    // Group by hour
+    final now = DateTime.now();
+    final counts = List.filled(24, 0);
+    int maxCount = 1;
+    
+    for (final a in activities) {
+      if (a['waktu_masuk'] != null) {
+        final t = DateTime.parse(a['waktu_masuk']).toLocal();
+        // Only today
+        if (t.year == now.year && t.month == now.month && t.day == now.day) {
+          counts[t.hour]++;
+          if (counts[t.hour] > maxCount) maxCount = counts[t.hour];
+        }
+      }
+    }
+
     return SizedBox(
       height: 200,
       child: Column(
         children: [
-          Expanded(child: CustomPaint(painter: _LinePainter())),
+          Expanded(child: CustomPaint(painter: _LinePainter(counts, maxCount))),
           const SizedBox(height: 8),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: ['08:00', '10:00', '12:00', '14:00', '16:00', '18:00']
+            children: ['00:00', '04:00', '08:00', '12:00', '16:00', '20:00']
                 .map((t) => Text(t,
                 style: const TextStyle(fontSize: 9, color: _kMuted)))
                 .toList(),
@@ -425,18 +444,19 @@ class _LineChartWidget extends StatelessWidget {
 }
 
 class _LinePainter extends CustomPainter {
+  final List<int> counts;
+  final int maxCount;
+  
+  _LinePainter(this.counts, this.maxCount);
+
   @override
   void paint(Canvas canvas, Size size) {
-    final points = [
-      Offset(0, size.height * 0.85),
-      Offset(size.width * 0.15, size.height * 0.7),
-      Offset(size.width * 0.30, size.height * 0.55),
-      Offset(size.width * 0.45, size.height * 0.2),
-      Offset(size.width * 0.60, size.height * 0.15),
-      Offset(size.width * 0.70, size.height * 0.35),
-      Offset(size.width * 0.85, size.height * 0.5),
-      Offset(size.width, size.height * 0.65),
-    ];
+    final points = <Offset>[];
+    for (int i = 0; i < 24; i++) {
+      double x = (i / 23) * size.width;
+      double y = size.height - ((counts[i] / maxCount) * size.height * 0.85); // max 85% height
+      points.add(Offset(x, y));
+    }
 
     // Fill
     final fillPath = Path()..moveTo(0, size.height);
@@ -445,12 +465,13 @@ class _LinePainter extends CustomPainter {
     }
     fillPath.lineTo(size.width, size.height);
     fillPath.close();
+    
     canvas.drawPath(fillPath,
         Paint()..shader = LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
           colors: [
-            const Color(0xFF1E3FAE).withValues(alpha: 0.15),
+            const Color(0xFF1E3FAE).withValues(alpha: 0.25),
             const Color(0xFF1E3FAE).withValues(alpha: 0.0),
           ],
         ).createShader(Rect.fromLTWH(0, 0, size.width, size.height)));
@@ -461,20 +482,28 @@ class _LinePainter extends CustomPainter {
       ..strokeWidth = 2.5
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round;
+      
     final linePath = Path()..moveTo(points.first.dx, points.first.dy);
     for (int i = 1; i < points.length; i++) {
-      final cp1 = Offset(
-          (points[i - 1].dx + points[i].dx) / 2, points[i - 1].dy);
-      final cp2 = Offset(
-          (points[i - 1].dx + points[i].dx) / 2, points[i].dy);
-      linePath.cubicTo(
-          cp1.dx, cp1.dy, cp2.dx, cp2.dy, points[i].dx, points[i].dy);
+      final cp1 = Offset((points[i - 1].dx + points[i].dx) / 2, points[i - 1].dy);
+      final cp2 = Offset((points[i - 1].dx + points[i].dx) / 2, points[i].dy);
+      linePath.cubicTo(cp1.dx, cp1.dy, cp2.dx, cp2.dy, points[i].dx, points[i].dy);
     }
     canvas.drawPath(linePath, linePaint);
+    
+    // Draw dots
+    final dotPaint = Paint()..color = const Color(0xFF1E3FAE)..style = PaintingStyle.fill;
+    final whitePaint = Paint()..color = Colors.white..style = PaintingStyle.fill;
+    for (int i = 0; i < 24; i++) {
+      if (counts[i] > 0) {
+        canvas.drawCircle(points[i], 4, dotPaint);
+        canvas.drawCircle(points[i], 2, whitePaint);
+      }
+    }
   }
 
   @override
-  bool shouldRepaint(_) => false;
+  bool shouldRepaint(covariant _LinePainter oldDelegate) => true;
 }
 
 // ─── Recent Activity Table ────────────────────────────────────────────────────

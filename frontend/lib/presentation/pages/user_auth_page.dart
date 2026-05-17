@@ -245,7 +245,11 @@ class _UserAuthPageState extends State<UserAuthPage>
                               fontSize: 12, color: Color(0xFF94A3B8)),
                         ),
                         GestureDetector(
-                          onTap: () {},
+                          onTap: () {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Terms of Service — segera tersedia'), behavior: SnackBarBehavior.floating),
+                            );
+                          },
                           child: const Text(
                             'Terms of Service',
                             style: TextStyle(
@@ -260,7 +264,11 @@ class _UserAuthPageState extends State<UserAuthPage>
                               fontSize: 12, color: Color(0xFF94A3B8)),
                         ),
                         GestureDetector(
-                          onTap: () {},
+                          onTap: () {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Privacy Policy — segera tersedia'), behavior: SnackBarBehavior.floating),
+                            );
+                          },
                           child: const Text(
                             'Privacy Policy',
                             style: TextStyle(
@@ -311,7 +319,14 @@ class _UserAuthPageState extends State<UserAuthPage>
           children: [
             const _FieldLabel(label: 'PASSWORD'),
             GestureDetector(
-              onTap: () {},
+              onTap: () {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Hubungi Admin untuk reset password mahasiswa'),
+                    behavior: SnackBarBehavior.floating,
+                  ),
+                );
+              },
               child: const Text('Forgot?',
                   style: TextStyle(
                       fontSize: 13,

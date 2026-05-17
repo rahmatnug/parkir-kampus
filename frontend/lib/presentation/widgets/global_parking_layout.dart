@@ -7,11 +7,11 @@ class GlobalParkingLayout extends StatelessWidget {
   final int currentIndex;
 
   const GlobalParkingLayout({
-    Key? key,
+    super.key,
     required this.title,
     required this.body,
     this.currentIndex = 1, // Default to Parking tab
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -71,11 +71,11 @@ class GlobalParkingLayout extends StatelessWidget {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              _buildNavItem(Icons.home, "Home", 0),
-              _buildNavItem(Icons.local_parking, "Parking", 1),
+              _buildNavItem(context, Icons.home, "Home", 0),
+              _buildNavItem(context, Icons.local_parking, "Parking", 1),
               const SizedBox(width: 48), // Space for centered FAB
-              _buildNavItem(Icons.notifications_none, "Alerts", 2),
-              _buildNavItem(Icons.person_outline, "Profile", 3),
+              _buildNavItem(context, Icons.notifications_none, "Alerts", 2),
+              _buildNavItem(context, Icons.person_outline, "Profile", 3),
             ],
           ),
         ),
@@ -83,12 +83,13 @@ class GlobalParkingLayout extends StatelessWidget {
     );
   }
 
-  Widget _buildNavItem(IconData icon, String label, int index) {
+  Widget _buildNavItem(BuildContext context, IconData icon, String label, int index) {
     final isSelected = currentIndex == index;
     final color = isSelected ? const Color(0xFF1E70EB) : const Color(0xFF6B7280);
     return InkWell(
       onTap: () {
-        // TODO: Navigation to corresponding tab
+        // Return to main home (user_home_page) where real tab navigation lives
+        Navigator.of(context).popUntil((route) => route.isFirst);
       },
       child: Column(
         mainAxisSize: MainAxisSize.min,

@@ -17,12 +17,12 @@ class ParkingMapOverlay extends StatelessWidget {
   static const double _maxY = 500.0;
 
   const ParkingMapOverlay({
-    Key? key,
+    super.key,
     required this.zone,
     required this.slotNumber,
     required this.xCoord,
     required this.yCoord,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

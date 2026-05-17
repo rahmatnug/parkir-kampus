@@ -21,13 +21,15 @@ func NewAdminRepository(db *gorm.DB) domain.AdminRepository {
 func (r *adminRepository) GetDashboardStats() (*domain.DashboardStats, error) {
 	var stats domain.DashboardStats
 
-	// Calculate Total Capacity
-	r.db.Model(&domain.ZonaParkir{}).Select("COALESCE(SUM(kapasitas), 0)").Row().Scan(&stats.TotalCapacity)
+	// Total Capacity = jumlah slot fisik yang ada di DB (bukan SUM(kapasitas) zona)
+	var totalSlots int64
+	r.db.Model(&domain.SlotParkir{}).Count(&totalSlots)
+	stats.TotalCapacity = int(totalSlots)
 
-	// Calculate Active Vehicles (status = 'parkir' in transaksi)
-	var activeCount int64
-	r.db.Model(&domain.Transaksi{}).Where("status = ?", "parkir").Count(&activeCount)
-	stats.ActiveVehicles = int(activeCount)
+	// Active Vehicles = slot ber-status 'occupied' (konsisten dengan GetParkingStatus)
+	var occupiedCount int64
+	r.db.Model(&domain.SlotParkir{}).Where("status = ?", "occupied").Count(&occupiedCount)
+	stats.ActiveVehicles = int(occupiedCount)
 
 	// Available slots = Total - Active
 	stats.AvailableSlots = stats.TotalCapacity - stats.ActiveVehicles

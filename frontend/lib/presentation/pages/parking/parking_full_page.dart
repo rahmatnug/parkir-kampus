@@ -1,19 +1,26 @@
 import 'package:flutter/material.dart';
 import '../../widgets/global_parking_layout.dart';
 
-class ParkingFullPage extends StatelessWidget {
+class ParkingFullPage extends StatefulWidget {
   final List<String> availableZones;
   final String vehicleType;
 
   const ParkingFullPage({
-    Key? key,
+    super.key,
     required this.availableZones,
     required this.vehicleType,
-  }) : super(key: key);
+  });
+
+  @override
+  State<ParkingFullPage> createState() => _ParkingFullPageState();
+}
+
+class _ParkingFullPageState extends State<ParkingFullPage> {
+  bool _notifyCardVisible = true;
 
   @override
   Widget build(BuildContext context) {
-    final zonesText = availableZones.join(' DAN ');
+    final zonesText = widget.availableZones.join(' DAN ');
 
     return GlobalParkingLayout(
       title: 'Parking Assigned',
@@ -67,7 +74,7 @@ class ParkingFullPage extends StatelessWidget {
                 border: Border.all(color: Colors.grey.shade200),
               ),
               child: Text(
-                'SLOT KOSONG UNTUK ${vehicleType.toUpperCase()}\nTERSEDIA DI ZONA $zonesText',
+                'SLOT KOSONG UNTUK ${widget.vehicleType.toUpperCase()}\nTERSEDIA DI ZONA $zonesText',
                 textAlign: TextAlign.center,
                 style: const TextStyle(
                   fontFamily: 'Montserrat',
@@ -79,85 +86,100 @@ class ParkingFullPage extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 24),
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: const Color(0xFF1E70EB),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.2),
-                          borderRadius: BorderRadius.circular(8),
+            if (_notifyCardVisible)
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF1E70EB),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.2),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Icon(Icons.notifications_none, color: Colors.white),
                         ),
-                        child: const Icon(Icons.notifications_none, color: Colors.white),
-                      ),
-                      const SizedBox(width: 12),
-                      const Expanded(
-                        child: Text(
-                          'Stay Notified?',
-                          style: TextStyle(
-                            fontFamily: 'Montserrat',
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
+                        const SizedBox(width: 12),
+                        const Expanded(
+                          child: Text(
+                            'Stay Notified?',
+                            style: TextStyle(
+                              fontFamily: 'Montserrat',
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
                           ),
                         ),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.close, color: Colors.black, size: 20),
-                        onPressed: () {
-                          // TODO: Dismiss card logic
-                        },
-                      ),
-                      Container(
-                        decoration: const BoxDecoration(
-                          color: Colors.black,
-                          shape: BoxShape.circle,
+                        IconButton(
+                          icon: const Icon(Icons.close, color: Colors.black, size: 20),
+                          onPressed: () => setState(() => _notifyCardVisible = false),
                         ),
-                        child: IconButton(
-                          icon: const Icon(Icons.check, color: Colors.white, size: 20),
-                          padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints(),
-                          onPressed: () {
-                            // TODO: Opt-in notifications logic
-                          },
-                        ),
-                      )
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  const Text(
-                    'Jika seluruh zona penuh kamu bisa aktifkan notif agar kami bisa memberitahu notifikasi saat ada slot kosong di zona',
-                    style: TextStyle(
-                      fontFamily: 'Montserrat',
-                      fontSize: 13,
-                      fontWeight: FontWeight.w500,
-                      color: Colors.white,
-                      height: 1.5,
+                        Container(
+                          decoration: const BoxDecoration(
+                            color: Colors.black,
+                            shape: BoxShape.circle,
+                          ),
+                          child: IconButton(
+                            icon: const Icon(Icons.check, color: Colors.white, size: 20),
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
+                            onPressed: () {
+                              setState(() => _notifyCardVisible = false);
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Notifikasi diaktifkan! Kami akan memberitahu saat slot tersedia.'),
+                                  backgroundColor: Color(0xFF16A34A),
+                                  behavior: SnackBarBehavior.floating,
+                                ),
+                              );
+                            },
+                          ),
+                        )
+                      ],
                     ),
-                  ),
-                ],
+                    const SizedBox(height: 12),
+                    const Text(
+                      'Jika seluruh zona penuh kamu bisa aktifkan notif agar kami bisa memberitahu notifikasi saat ada slot kosong di zona',
+                      style: TextStyle(
+                        fontFamily: 'Montserrat',
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                        color: Colors.white,
+                        height: 1.5,
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
             const SizedBox(height: 24),
             // Empty placeholder box for aesthetic balance as seen in the mockup
-            Container(
-              width: double.infinity,
-              height: 60,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.grey.shade200),
+            if (!_notifyCardVisible)
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.grey.shade200),
+                ),
+                child: const Row(
+                  children: [
+                    Icon(Icons.check_circle_rounded, color: Color(0xFF16A34A), size: 20),
+                    SizedBox(width: 8),
+                    Text('Kartu notifikasi telah ditutup',
+                      style: TextStyle(fontSize: 13, color: Color(0xFF64748B))),
+                  ],
+                ),
               ),
-            ),
           ],
         ),
       ),

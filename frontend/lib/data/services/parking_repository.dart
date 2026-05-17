@@ -5,13 +5,13 @@ import '../models/parking_zone.dart';
 class ParkingRepository {
   final ApiClient _apiClient = ApiClient();
 
-  /// Mengambil status okupansi dari Backend Golang
+  /// Fetches zone occupancy data from GET /api/v1/parking/status
   Future<List<ParkingZone>> getParkingStatus() async {
     try {
       final response = await _apiClient.dio.get('/api/v1/parking/status');
       
       if (response.statusCode == 200) {
-        final List data = response.data['data']; // Asumsi response: {"data": [...]}
+        final List data = response.data['data'] ?? [];
         return data.map((e) => ParkingZone.fromJson(e)).toList();
       } else {
         throw Exception("Gagal mengambil data status parkir.");

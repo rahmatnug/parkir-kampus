@@ -3,32 +3,31 @@ import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import 'user_edit_profile_page.dart';
 import 'user/profile/change_password_user_page.dart';
-// ─── Data ──────────────────────────────────────────────────────────────────
 import '../providers/parking_provider.dart';
 import '../../data/models/parking_zone.dart';
+import 'parking/qr_scan_page.dart';
+import 'parking/exit_parking_page.dart';
+import 'user_history_page.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:intl/intl.dart';
 
-// Helper colors
-Color _getZoneColor(String name) {
-  if (name.contains('A')) return const Color(0xFF16A34A);
-  if (name.contains('B')) return const Color(0xFFD97706);
-  if (name.contains('C')) return const Color(0xFFDC2626);
-  return const Color(0xFF2563EB); // default
+// â”€â”€â”€ String Extension â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+extension StringCapitalize on String {
+  String capitalize() =>
+      isEmpty ? this : '${this[0].toUpperCase()}${substring(1).toLowerCase()}';
+}
+// ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Availability Helpers ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
+Color _availColor(ParkingZone z) {
+  double ratio = z.kapasitasMaksimal > 0 ? z.terisiSaatIni.toDouble() / z.kapasitasMaksimal.toDouble() : 0.0;
+  if (ratio >= 1.0) return const Color(0xFFEF4444);
+  if (ratio >= 0.75) return const Color(0xFFF97316);
+  return const Color(0xFF22C55E);
 }
 
-Color _getZoneBgColor(String name) {
-  if (name.contains('A')) return const Color(0xFFDCFCE7);
-  if (name.contains('B')) return const Color(0xFFFEF3C7);
-  if (name.contains('C')) return const Color(0xFFFFE4E6);
-  return const Color(0xFFDBEAFE); // default
-}
 
-String _getZoneLabel(String name) {
-  final parts = name.split(' ');
-  if (parts.length > 1) return parts.last[0];
-  return name.isNotEmpty ? name[0] : '?';
-}
-
-// ─── Main Page ────────────────────────────────────────────────────────────────
+// ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Main Page ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
 class UserHomePage extends StatefulWidget {
   const UserHomePage({super.key});
 
@@ -38,54 +37,62 @@ class UserHomePage extends StatefulWidget {
 
 class _UserHomePageState extends State<UserHomePage> {
   int _selectedTab = 0;
+  late PageController _pageController;
 
   @override
   void initState() {
     super.initState();
+    _pageController = PageController();
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (!mounted) return;
       final provider = context.read<ParkingProvider>();
       final token = await context.read<AuthProvider>().getToken();
       provider.fetchParkingStatus();
-      if (token != null) {
-        provider.initializeWebSocket(token);
-      }
+      if (token != null) provider.initializeWebSocket(token);
     });
   }
 
   @override
   void dispose() {
-    // Dipanggil saat logout / app ditutup
-    final provider = context.read<ParkingProvider>();
-    provider.disconnectWebSocket();
+    _pageController.dispose();
+    context.read<ParkingProvider>().disconnectWebSocket();
     super.dispose();
+  }
+
+  void _onTabChanged(int i) {
+    setState(() => _selectedTab = i);
+    _pageController.animateToPage(i,
+        duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
   }
 
   @override
   Widget build(BuildContext context) {
-    final tabs = [
-      const _HomeTab(),
-      _ParkingTab(onBack: () => setState(() => _selectedTab = 0)),
-      const _ScanTab(),
-      _AlertsTab(onBack: () => setState(() => _selectedTab = 0)),
-      _ProfileTab(onBack: () => setState(() => _selectedTab = 0)),
-    ];
-
     return Scaffold(
-      backgroundColor: Colors.white,
-      body: IndexedStack(
-        index: _selectedTab,
-        children: tabs,
+      backgroundColor: const Color(0xFFF8FAFC),
+      resizeToAvoidBottomInset: false,
+      body: PageView(
+        controller: _pageController,
+        physics: const NeverScrollableScrollPhysics(),
+        children: [
+          const _HomeTab(),
+          _ParkingTab(
+            onBack: () => _onTabChanged(0),
+            onScan: () => _onTabChanged(2),
+          ),
+          const _ScanTab(),
+          _AlertsTab(onBack: () => _onTabChanged(0)),
+          _ProfileTab(onBack: () => _onTabChanged(0)),
+        ],
       ),
       bottomNavigationBar: _BottomNav(
         selectedIndex: _selectedTab,
-        onTap: (i) => setState(() => _selectedTab = i),
+        onTap: _onTabChanged,
       ),
     );
   }
 }
 
-// ─── Bottom Navigation ────────────────────────────────────────────────────────
+// ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Bottom Navigation ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
 class _BottomNav extends StatelessWidget {
   final int selectedIndex;
   final ValueChanged<int> onTap;
@@ -108,8 +115,9 @@ class _BottomNav extends StatelessWidget {
       ),
       child: SafeArea(
         top: false,
-        child: SizedBox(
-          height: 60,
+        child: Padding(
+          // Padding vertikal seragam — tidak ada SizedBox fixed height
+          padding: const EdgeInsets.symmetric(vertical: 6),
           child: Row(
             children: [
               _NavItem(
@@ -124,30 +132,30 @@ class _BottomNav extends StatelessWidget {
                 selected: selectedIndex == 1,
                 onTap: () => onTap(1),
               ),
-              // Center Scan button
+              // Center Scan button — ukuran diperkecil agar muat
               Expanded(
                 child: GestureDetector(
                   onTap: () => onTap(2),
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
+                    mainAxisSize: MainAxisSize.min,
                     children: [
                       Container(
-                        width: 50,
-                        height: 50,
+                        width: 44,
+                        height: 44,
                         decoration: BoxDecoration(
                           color: const Color(0xFF2563EB),
-                          borderRadius: BorderRadius.circular(14),
+                          borderRadius: BorderRadius.circular(12),
                           boxShadow: [
                             BoxShadow(
-                              color:
-                                  const Color(0xFF2563EB).withValues(alpha: 0.4),
-                              blurRadius: 10,
-                              offset: const Offset(0, 4),
+                              color: const Color(0xFF2563EB).withValues(alpha: 0.4),
+                              blurRadius: 8,
+                              offset: const Offset(0, 3),
                             ),
                           ],
                         ),
                         child: const Icon(Icons.qr_code_scanner_rounded,
-                            color: Colors.white, size: 26),
+                            color: Colors.white, size: 22),
                       ),
                       const SizedBox(height: 2),
                       Text(
@@ -207,15 +215,15 @@ class _NavItem extends StatelessWidget {
         behavior: HitTestBehavior.opaque,
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 24, color: selected ? active : inactive),
+            Icon(icon, size: 22, color: selected ? active : inactive),
             const SizedBox(height: 2),
             Text(
               label,
               style: TextStyle(
                 fontSize: 11,
-                fontWeight:
-                    selected ? FontWeight.w600 : FontWeight.normal,
+                fontWeight: selected ? FontWeight.w600 : FontWeight.normal,
                 color: selected ? active : inactive,
               ),
             ),
@@ -226,359 +234,357 @@ class _NavItem extends StatelessWidget {
   }
 }
 
-// ─── HOME TAB ─────────────────────────────────────────────────────────────────
+// Ã¢â‚¬â€Ã¢â‚¬â€Ã¢â‚¬â€Ã¢â‚¬â€Ã¢â‚¬â€Ã¢â‚¬â€Ã¢â‚¬â€Ã¢â‚¬â€Ã¢â‚¬â€Ã¢â‚¬â€Ã¢â‚¬â€Ã¢â‚¬â€Ã¢â‚¬â€Ã¢â‚¬â€Ã¢â‚¬â€Ã¢â‚¬â€Ã¢â‚¬â€Ã¢â‚¬â€Ã¢â‚¬â€Ã¢â‚¬â€Ã¢â‚¬â€Ã¢â‚¬â€Ã¢â‚¬â€Ã¢â‚¬â€Ã¢â‚¬â€Ã¢â‚¬â€Ã¢â‚¬â€Ã¢â‚¬â€Ã¢â‚¬â€Ã¢â‚¬â€Ã¢â‚¬â€Ã¢â‚¬â€Ã¢â‚¬â€Ã¢â‚¬â€Ã¢â‚¬â€Ã¢â‚¬â€Ã¢â‚¬â€Ã¢â‚¬â€Ã¢â‚¬â€Ã¢â‚¬â€Ã¢â‚¬â€Ã¢â‚¬â€Ã¢â‚¬â€Ã¢â‚¬â€Ã¢â‚¬â€Ã¢â‚¬â€Ã¢â‚¬â€Ã¢â‚¬â€Ã¢â‚¬â€Ã¢â‚¬â€Ã¢â‚¬â€Ã¢â‚¬â€Ã¢â‚¬â€Ã¢â‚¬â€Ã¢â‚¬â€Ã¢â‚¬â€Ã¢â‚¬â€Ã¢â‚¬â€Ã¢â‚¬â€Ã¢â‚¬â€Ã¢â‚¬â€Ã¢â‚¬â€ HOME TAB Ã¢â‚¬â€Ã¢â‚¬â€Ã¢â‚¬â€Ã¢â‚¬â€Ã¢â‚¬â€Ã¢â‚¬â€Ã¢â‚¬â€Ã¢â‚¬â€Ã¢â‚¬â€Ã¢â‚¬â€Ã¢â‚¬â€Ã¢â‚¬â€Ã¢â‚¬â€Ã¢â‚¬â€Ã¢â‚¬â€Ã¢â‚¬â€Ã¢â‚¬â€Ã¢â‚¬â€Ã¢â‚¬â€Ã¢â‚¬â€Ã¢â‚¬â€Ã¢â‚¬â€Ã¢â‚¬â€Ã¢â‚¬â€Ã¢â‚¬â€Ã¢â‚¬â€Ã¢â‚¬â€Ã¢â‚¬â€Ã¢â‚¬â€Ã¢â‚¬â€Ã¢â‚¬â€Ã¢â‚¬â€Ã¢â‚¬â€Ã¢â‚¬â€Ã¢â‚¬â€Ã¢â‚¬â€Ã¢â‚¬â€Ã¢â‚¬â€Ã¢â‚¬â€Ã¢â‚¬â€Ã¢â‚¬â€Ã¢â‚¬â€Ã¢â‚¬â€Ã¢â‚¬â€Ã¢â‚¬â€Ã¢â‚¬â€Ã¢â‚¬â€Ã¢â‚¬â€Ã¢â‚¬â€Ã¢â‚¬â€Ã¢â‚¬â€Ã¢â‚¬â€Ã¢â‚¬â€Ã¢â‚¬â€Ã¢â‚¬â€Ã¢â‚¬â€Ã¢â‚¬â€Ã¢â‚¬â€Ã¢â‚¬â€Ã¢â‚¬â€Ã¢â‚¬â€Ã¢â‚¬â€
 class _HomeTab extends StatelessWidget {
   const _HomeTab();
-
   String _greeting() {
     final h = DateTime.now().hour;
-    if (h < 12) return 'Good Morning,';
-    if (h < 17) return 'Good Afternoon,';
-    return 'Good Evening,';
+    if (h < 12) return 'Selamat Pagi,';
+    if (h < 17) return 'Selamat Siang,';
+    return 'Selamat Malam,';
   }
 
   @override
   Widget build(BuildContext context) {
-    final parkingProvider = context.watch<ParkingProvider>();
-    final zones = parkingProvider.zones;
-    final isLoading = parkingProvider.isLoading && zones.isEmpty;
+    final pp = context.watch<ParkingProvider>();
+    final auth = context.watch<AuthProvider>();
+    final zones = pp.zones;
+    final loading = pp.isLoading && zones.isEmpty;
 
     return SafeArea(
-      child: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+      child: RefreshIndicator(
+        onRefresh: () => pp.fetchParkingStatus(silent: true),
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(
+            parent: ClampingScrollPhysics(),
+          ),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             // Header
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
-              child: Row(
-                children: [
-                  CircleAvatar(
-                    radius: 24,
-                    backgroundColor: const Color(0xFFDBEAFE),
-                    child: ClipOval(
-                      child: Image.asset(
-                        'assets/images/admin_splash.png',
-                        fit: BoxFit.cover,
-                        width: 48,
-                        height: 48,
-                        errorBuilder: (_, __, ___) => const Icon(
-                          Icons.person_rounded,
-                          color: Color(0xFF2563EB),
-                          size: 28,
-                        ),
-                      ),
-                    ),
+              child: Row(children: [
+                CircleAvatar(
+                  radius: 24,
+                  backgroundColor: const Color(0xFFDBEAFE),
+                  child: ClipOval(
+                    child: (auth.profileImageUrl != null && auth.profileImageUrl!.isNotEmpty)
+                      ? Image.network(auth.profileImageUrl!,
+                          fit: BoxFit.cover, width: 48, height: 48,
+                          errorBuilder: (_, __, ___) => const Icon(Icons.person_rounded, color: Color(0xFF2563EB), size: 28))
+                      : const Icon(Icons.person_rounded, color: Color(0xFF2563EB), size: 28),
                   ),
-                  const SizedBox(width: 12),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        _greeting(),
-                        style: const TextStyle(
-                            fontSize: 13, color: Color(0xFF64748B)),
-                      ),
-                      Text(
-                        'Welcome, ${context.watch<AuthProvider>().nama?.split(' ').first ?? 'Student'}',
-                        style: const TextStyle(
-                          fontSize: 17,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF0F172A),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 16),
+                ),
+                const SizedBox(width: 12),
+                Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text(_greeting(), style: const TextStyle(fontSize: 13, color: Color(0xFF64748B))),
+                  Text('Welcome, ${auth.nama?.split(' ').first ?? 'Student'}',
+                    style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
+                    overflow: TextOverflow.ellipsis),
+                ])),
+                GestureDetector(
+                  onTap: () {
+                    Navigator.push(context, MaterialPageRoute(builder: (_) => const UserHistoryPage()));
+                  },
+                  child: Container(
+                    width: 42, height: 42,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF1F5F9), borderRadius: BorderRadius.circular(12)),
+                    child: const Icon(Icons.history_rounded, color: Color(0xFF64748B), size: 22)),
+                ),
+              ])),
+            const SizedBox(height: 20),
 
-            // Map image
+            // ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Interactive Map ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Stack(
-                children: [
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(16),
-                    child: SizedBox(
-                      width: double.infinity,
-                      height: 210,
-                      child: Image.asset(
-                        'assets/images/maps.png',
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => Container(
-                          color: const Color(0xFF86EFAC),
-                          child: const Center(
-                            child: Icon(Icons.map_rounded,
-                                size: 80, color: Colors.white54),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                  // Zone markers
-                  if (zones.isNotEmpty)
-                    Positioned(
-                      top: 55,
-                      left: 55,
-                      child: _ZoneMarker(zone: zones[0]),
-                    ),
-                  if (zones.length > 1)
-                    Positioned(
-                      top: 85,
-                      right: 90,
-                      child: _ZoneMarker(zone: zones[1]),
-                    ),
-                  if (zones.length > 2)
-                    Positioned(
-                      top: 115,
-                      right: 115,
-                      child: _ZoneMarker(zone: zones[2]),
-                    ),
-                ],
+              child: Container(
+                decoration: BoxDecoration(borderRadius: BorderRadius.circular(20),
+                  boxShadow: [BoxShadow(color: const Color(0xFF0F172A).withValues(alpha: 0.08), blurRadius: 20, offset: const Offset(0, 6))]),
+                child: ClipRRect(borderRadius: BorderRadius.circular(20),
+                  child: LayoutBuilder(builder: (ctx, box) {
+                    final mW = box.maxWidth;
+                    // Gunakan AspectRatio 16:9 — bukan hardcoded height
+                    final mH = mW * 9 / 16;
+                    return SizedBox(width: mW, height: mH, child: Stack(children: [
+                      Positioned.fill(child: Image.asset('assets/images/maps.png', fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => Container(color: const Color(0xFF86EFAC),
+                          child: const Center(child: Icon(Icons.map_rounded, size: 80, color: Colors.white54))))),
+                      Positioned.fill(child: Container(decoration: BoxDecoration(
+                        gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter,
+                          colors: [Colors.black.withValues(alpha: 0.05), Colors.black.withValues(alpha: 0.25)])))),
+                      ...zones.asMap().entries.map((e) {
+                        final i = e.key; final z = e.value;
+                        final dp = [[0.18,0.28],[0.55,0.42],[0.42,0.62],[0.75,0.30],[0.30,0.50]];
+                        final px = (z.xCoord > 0) ? z.xCoord/400.0 : (i < dp.length ? dp[i][0] : 0.5);
+                        final py = (z.yCoord > 0) ? z.yCoord/400.0 : (i < dp.length ? dp[i][1] : 0.5);
+                        return Positioned(left: (px*mW).clamp(16.0, mW-50), top: (py*mH).clamp(8.0, mH-50),
+                          child: _InteractivePin(zone: z));
+                      }),
+                      Positioned(bottom: 12, left: 16, child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.5), borderRadius: BorderRadius.circular(8)),
+                        child: const Text('Denah Parkir Kampus', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w500)))),
+                    ]));
+                  })),
               ),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 24),
 
-            // Parking Zones header
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Row(
-                children: [
-                  const Text(
-                    'Parking Zones',
-                    style: TextStyle(
-                        fontSize: 17,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF0F172A)),
-                  ),
-                  const Spacer(),
-                  const Icon(Icons.tune_rounded,
-                      size: 22, color: Color(0xFF64748B)),
-                ],
-              ),
-            ),
+            // ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Zone Header ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
+            Padding(padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Row(children: [
+                const Text('Parking Zones', style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
+                const Spacer(),
+                const Icon(Icons.tune_rounded, size: 22, color: Color(0xFF64748B)),
+              ])),
             const SizedBox(height: 12),
 
-            if (isLoading)
-              const Center(child: CircularProgressIndicator())
+            // ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Zone Cards ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
+            if (loading)
+              const Padding(padding: EdgeInsets.all(40), child: Center(child: CircularProgressIndicator(color: Color(0xFF2563EB))))
             else if (zones.isEmpty)
-              const Center(child: Text("Tidak ada zona yang tersedia."))
+              const Padding(padding: EdgeInsets.all(40), child: Center(child: Text('Tidak ada zona.', style: TextStyle(color: Color(0xFF94A3B8)))))
             else
-              // Zone Cards
-              for (final zone in zones)
-                Padding(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                  child: _ZoneCard(zone: zone),
-                ),
-            const SizedBox(height: 20),
-          ],
+              ListView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: zones.length,
+                itemBuilder: (context, index) {
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 5),
+                    child: _ZoneCard(zone: zones[index]),
+                  );
+                },
+              ),
+            const SizedBox(height: 24),
+          ]),
         ),
       ),
     );
   }
 }
 
-class _ZoneMarker extends StatelessWidget {
+class _InteractivePin extends StatelessWidget {
   final ParkingZone zone;
-  const _ZoneMarker({required this.zone});
-
+  const _InteractivePin({required this.zone});
   @override
   Widget build(BuildContext context) {
-    final color = _getZoneColor(zone.nama);
-    final label = _getZoneLabel(zone.nama);
-    return Container(
-      width: 34,
-      height: 34,
-      decoration: BoxDecoration(
-        color: color,
-        shape: BoxShape.circle,
-        boxShadow: [
-          BoxShadow(
-            color: color.withValues(alpha: 0.4),
-            blurRadius: 8,
-            offset: const Offset(0, 3),
-          ),
-        ],
-      ),
-      child: Center(
-        child: Text(
-          label,
-          style: const TextStyle(
-              color: Colors.white,
-              fontSize: 13,
-              fontWeight: FontWeight.bold),
-        ),
-      ),
-    );
+    final c = _availColor(zone);
+    return Container(width: 38, height: 38,
+      decoration: BoxDecoration(color: c, shape: BoxShape.circle,
+        border: Border.all(color: Colors.white, width: 2.5),
+        boxShadow: [BoxShadow(color: c.withValues(alpha: 0.5), blurRadius: 10, offset: const Offset(0, 3))]),
+      child: Center(child: Text(zone.letter,
+        style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w800))));
   }
 }
 
 class _ZoneCard extends StatefulWidget {
   final ParkingZone zone;
   const _ZoneCard({required this.zone});
-
   @override
   State<_ZoneCard> createState() => _ZoneCardState();
 }
 
 class _ZoneCardState extends State<_ZoneCard> with SingleTickerProviderStateMixin {
-  late AnimationController _animController;
-  late Animation<Color?> _colorAnimation;
-  int _lastAvailable = -1;
+  late AnimationController _pulseAnim;
+  double _prevProgress = -1;
+  int _prevTersedia = -1;
 
   @override
   void initState() {
     super.initState();
-    _animController = AnimationController(
+    _pulseAnim = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 500),
     );
-    _colorAnimation = ColorTween(
-      begin: const Color(0xFF64748B),
-      end: const Color(0xFF16A34A), // Highlight color
-    ).animate(CurvedAnimation(parent: _animController, curve: Curves.easeInOut));
+    final z = widget.zone;
+    _prevProgress = z.kapasitasMaksimal > 0
+        ? z.terisiSaatIni.toDouble() / z.kapasitasMaksimal.toDouble()
+        : 0.0;
+    _prevTersedia = z.terisiSaatIni;
   }
 
   @override
-  void didUpdateWidget(covariant _ZoneCard widget) {
-    super.didUpdateWidget(widget);
-    final currentAvailable = widget.zone.kapasitasMaksimal - widget.zone.terisiSaatIni;
-    if (_lastAvailable != -1 && currentAvailable != _lastAvailable) {
-      // Trigger animation
-      _animController.forward().then((_) => _animController.reverse());
+  void didUpdateWidget(covariant _ZoneCard old) {
+    super.didUpdateWidget(old);
+    final newTerisi = widget.zone.terisiSaatIni;
+    if (_prevTersedia != -1 && newTerisi != _prevTersedia) {
+      _pulseAnim.forward().then((_) => _pulseAnim.reverse());
     }
-    _lastAvailable = currentAvailable;
+    _prevTersedia = newTerisi;
   }
 
   @override
   void dispose() {
-    _animController.dispose();
+    _pulseAnim.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final zone = widget.zone;
-    final available = zone.kapasitasMaksimal - zone.terisiSaatIni;
-    final total = zone.kapasitasMaksimal;
-    final label = _getZoneLabel(zone.nama);
-    final color = _getZoneColor(zone.nama);
-    final bgColor = _getZoneBgColor(zone.nama);
+    final z = widget.zone;
+    // Hitung progressValue dari data real
+    final double currentProgress = z.kapasitasMaksimal > 0
+        ? (z.terisiSaatIni.toDouble() / z.kapasitasMaksimal.toDouble()).clamp(0.0, 1.0)
+        : 0.0;
+
+    // Tentukan warna & label berdasarkan occupancy ratio
+    final Color statusColor;
+    final String statusLabel;
+    final Color bgColor;
+
+    if (currentProgress >= 1.0) {
+      statusColor = const Color(0xFFEF4444); // Merah
+      statusLabel = 'Penuh';
+      bgColor = const Color(0xFFFFE4E6);
+    } else if (currentProgress >= 0.75) {
+      statusColor = const Color(0xFFF97316); // Orange
+      statusLabel = 'Hampir Penuh';
+      bgColor = const Color(0xFFFEF3C7);
+    } else {
+      statusColor = const Color(0xFF22C55E); // Hijau
+      statusLabel = 'Tersedia';
+      bgColor = const Color(0xFFDCFCE7);
+    }
+
+    // Simpan nilai sebelumnya untuk animasi tween
+    final double beginProgress = _prevProgress;
+    // Update _prevProgress setelah frame ini
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _prevProgress = currentProgress;
+    });
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: const Color(0xFFE2E8F0)),
         boxShadow: const [
-          BoxShadow(
-            color: Color(0x06000000),
-            blurRadius: 8,
-            offset: Offset(0, 2),
-          ),
+          BoxShadow(color: Color(0x06000000), blurRadius: 8, offset: Offset(0, 2))
         ],
       ),
-      child: Row(
-        children: [
-          // Zone letter badge
-          Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              color: bgColor,
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Center(
-              child: Text(
-                label,
-                style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: color),
-              ),
-            ),
-          ),
-          const SizedBox(width: 14),
+      child: IntrinsicHeight(
+        child: Row(children: [
+          // Left accent bar warna status
+          Container(width: 4, height: double.infinity, color: statusColor),
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(zone.nama,
-                    style: const TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
-                        color: Color(0xFF0F172A))),
-                const SizedBox(height: 2),
-                AnimatedBuilder(
-                  animation: _colorAnimation,
-                  builder: (context, child) {
-                    return Text(
-                      available <= 0
-                          ? 'Penuh'
-                          : '$available slot tersedia',
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+              child: Row(children: [
+                // Icon zona
+                Container(
+                  width: 48, height: 48,
+                  decoration: BoxDecoration(
+                    color: bgColor, borderRadius: BorderRadius.circular(12)),
+                  child: Center(
+                    child: Text(z.letter,
                       style: TextStyle(
-                          fontSize: 12,
-                          color: available <= 0
-                              ? const Color(0xFFDC2626)
-                              : _colorAnimation.value),
-                    );
-                  }
-                ),
-              ],
-            ),
-          ),
-          // Availability indicator
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              AnimatedBuilder(
-                animation: _colorAnimation,
-                builder: (context, child) {
-                  return Text(
-                    '$available/$total',
-                    style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.bold,
-                        color: _animController.isAnimating ? _colorAnimation.value : color),
-                  );
-                }
-              ),
-              const SizedBox(height: 4),
-              SizedBox(
-                width: 60,
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(4),
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 300),
-                    child: LinearProgressIndicator(
-                      value: total > 0 ? (available / total) : 0,
-                      minHeight: 5,
-                      backgroundColor: const Color(0xFFE2E8F0),
-                      valueColor: AlwaysStoppedAnimation<Color>(color),
-                    ),
+                        fontSize: 20, fontWeight: FontWeight.w800, color: statusColor)),
                   ),
                 ),
-              ),
-            ],
+                const SizedBox(width: 14),
+                // Nama & status
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(z.nama,
+                        style: const TextStyle(
+                          fontSize: 15, fontWeight: FontWeight.w700,
+                          color: Color(0xFF0F172A))),
+                      const SizedBox(height: 2),
+                      Row(children: [
+                        Container(
+                          width: 6, height: 6,
+                          decoration: BoxDecoration(
+                            color: statusColor, shape: BoxShape.circle)),
+                        const SizedBox(width: 6),
+                        Text(statusLabel,
+                          style: TextStyle(
+                            fontSize: 12, fontWeight: FontWeight.w500,
+                            color: statusColor)),
+                        const SizedBox(width: 8),
+                        Icon(
+                          z.jenisKendaraan == 'mobil'
+                              ? Icons.directions_car_rounded
+                              : Icons.two_wheeler_rounded,
+                          size: 14, color: const Color(0xFF94A3B8)),
+                      ]),
+                    ],
+                  ),
+                ),
+                // Angka terisi & progress bar
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    AnimatedBuilder(
+                      animation: _pulseAnim,
+                      builder: (_, __) => Text(
+                        '${z.terisiSaatIni}/${z.kapasitasMaksimal}',
+                        style: TextStyle(
+                          fontSize: 14, fontWeight: FontWeight.w800,
+                          color: _pulseAnim.isAnimating
+                              ? const Color(0xFF16A34A)
+                              : statusColor),
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    // Progress bar dengan tween dari nilai lama ke nilai baru
+                    SizedBox(
+                      width: 64,
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(4),
+                        child: TweenAnimationBuilder<double>(
+                          key: ValueKey('${z.id}_progress'),
+                          tween: Tween<double>(
+                            begin: beginProgress,
+                            end: currentProgress,
+                          ),
+                          duration: const Duration(milliseconds: 600),
+                          curve: Curves.easeOut,
+                          builder: (_, v, __) => LinearProgressIndicator(
+                            value: v,
+                            minHeight: 6,
+                            backgroundColor: const Color(0xFFE2E8F0),
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              v >= 1.0
+                                  ? const Color(0xFFEF4444)
+                                  : v >= 0.75
+                                      ? const Color(0xFFF97316)
+                                      : const Color(0xFF22C55E),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ]),
+            ),
           ),
-        ],
+        ]),
       ),
     );
   }
 }
 
-// ─── PARKING TAB ──────────────────────────────────────────────────────────────
+
+// â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€” PARKING TAB â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”
 class _ParkingTab extends StatelessWidget {
   final VoidCallback? onBack;
+  final VoidCallback? onScan;
 
-  const _ParkingTab({this.onBack});
+  const _ParkingTab({this.onBack, this.onScan});
 
   @override
   Widget build(BuildContext context) {
+    final pp = context.watch<ParkingProvider>();
+    final hasSession = pp.hasActiveSession;
+
     return SafeArea(
       child: Column(
         children: [
@@ -603,115 +609,245 @@ class _ParkingTab extends StatelessWidget {
                     ),
                   ),
                 ),
-                const SizedBox(width: 24), // Balance the arrow
+                const SizedBox(width: 24),
               ],
             ),
           ),
           const Divider(height: 1, color: Color(0xFFE2E8F0)),
 
-          // Map area
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-              child: Stack(
-                children: [
-                  Positioned.fill(
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(8),
-                      child: Image.asset(
-                        'assets/images/maps.png',
-                        fit: BoxFit.cover,
-                      ),
-                    ),
-                  ),
-                  // Marker
-                  Align(
-                    alignment: const Alignment(-0.2, -0.7),
-                    child: Stack(
-                      alignment: Alignment.center,
-                      children: [
-                        const Icon(
-                          Icons.location_on,
-                          color: Color(0xFF60A5FA),
-                          size: 54,
+          // Conditional body â€” no session vs active session
+          if (!hasSession) ...{
+            Expanded(
+              child: Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(32),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 100,
+                        height: 100,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFEFF6FF),
+                          borderRadius: BorderRadius.circular(24),
                         ),
-                        Positioned(
-                          top: 12,
-                          child: Container(
-                            width: 14,
-                            height: 14,
-                            decoration: const BoxDecoration(
-                              color: Colors.white,
-                              shape: BoxShape.circle,
+                        child: const Icon(
+                          Icons.local_parking_rounded,
+                          size: 56,
+                          color: Color(0xFF2563EB),
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                      const Text(
+                        'Belum Ada Sesi Parkir',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF0F172A),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      const Text(
+                        'Anda belum memiliki sesi parkir aktif.\nSilakan menuju tab Scan untuk masuk ke area parkir.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Color(0xFF64748B),
+                          height: 1.6,
+                        ),
+                      ),
+                      const SizedBox(height: 28),
+                      ElevatedButton.icon(
+                        onPressed: () {
+                          context.findAncestorStateOfType<_UserHomePageState>()?._pageController.animateToPage(
+                            2, duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
+                        },
+                        icon: const Icon(Icons.qr_code_scanner_rounded, size: 20),
+                        label: const Text('Pergi ke Scan'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF2563EB),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 24, vertical: 14),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12)),
+                          elevation: 0,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          } else ...{
+            // Map area with real dynamic marker
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                child: Stack(
+                  children: [
+                    Positioned.fill(
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: Image.asset(
+                          'assets/images/maps.png',
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => Container(
+                            color: const Color(0xFFDBEAFE),
+                            child: const Center(
+                              child: Icon(Icons.map_rounded,
+                                  size: 60, color: Color(0xFF93C5FD)),
                             ),
                           ),
                         ),
-                      ],
+                      ),
+                    ),
+                    // Dynamic marker
+                    Builder(builder: (ctx) {
+                      final zones = pp.zones;
+                      final matchedZone = zones.cast<ParkingZone?>().firstWhere(
+                            (z) => z!.nama == pp.assignedZone,
+                            orElse: () => null,
+                          );
+                      final xFrac = (matchedZone != null && matchedZone.xCoord > 0)
+                          ? (matchedZone.xCoord / 400.0).clamp(0.02, 0.95)
+                          : 0.4;
+                      final yFrac = (matchedZone != null && matchedZone.yCoord > 0)
+                          ? (matchedZone.yCoord / 400.0).clamp(0.02, 0.95)
+                          : 0.3;
+                      return Align(
+                        alignment: Alignment(
+                          (xFrac * 2 - 1).toDouble(),
+                          (yFrac * 2 - 1).toDouble(),
+                        ),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF2563EB),
+                                borderRadius: BorderRadius.circular(8),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: const Color(0xFF2563EB)
+                                        .withValues(alpha: 0.4),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 3),
+                                  ),
+                                ],
+                              ),
+                              child: Text(
+                                pp.assignedSlot ?? '-',
+                                style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold),
+                              ),
+                            ),
+                            const Icon(Icons.location_on,
+                                color: Color(0xFF2563EB), size: 32),
+                          ],
+                        ),
+                      );
+                    }),
+                  ],
+                ),
+              ),
+            ),
+
+            // Info Card (live data)
+            Container(
+              width: double.infinity,
+              margin: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+              padding:
+                  const EdgeInsets.symmetric(vertical: 20, horizontal: 20),
+              decoration: BoxDecoration(
+                color: const Color(0xFF2563EB),
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFF2563EB).withValues(alpha: 0.35),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    '${(pp.jenisKendaraan ?? 'Kendaraan').capitalize()} Anda ada di ${pp.assignedZone ?? '-'}',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 17,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    pp.assignedSlot ?? '-',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 26,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 2,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  GestureDetector(
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) => ExitParkingPage(
+                                zone: pp.assignedZone ?? '-',
+                                slotNumber: pp.assignedSlot ?? '-',
+                                xCoord: pp.assignedX ?? 0.0,
+                                yCoord: pp.assignedY ?? 0.0,
+                              )),
+                    ),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                            color: Colors.white.withValues(alpha: 0.4)),
+                      ),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.logout_rounded,
+                              color: Colors.white, size: 16),
+                          SizedBox(width: 6),
+                          Text(
+                            'Tap untuk keluar parkir',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ],
               ),
             ),
-          ),
-
-          // Info Card
-          Container(
-            width: double.infinity,
-            margin: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-            padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
-            decoration: BoxDecoration(
-              color: const Color(0xFF007AFF), // Bright blue
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: const [
-                BoxShadow(
-                  color: Color(0x33007AFF),
-                  blurRadius: 10,
-                  offset: Offset(0, 4),
-                ),
-              ],
-            ),
-            child: const Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  'Motor Anda ada di Zona B',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                SizedBox(height: 4),
-                Text(
-                  '#12',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                SizedBox(height: 8),
-                Text(
-                  'Scan QR Code ulang untuk keluar',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 16,
-                    fontStyle: FontStyle.italic,
-                  ),
-                ),
-              ],
-            ),
-          ),
+          },
         ],
       ),
     );
   }
 }
 
-// ─── SCAN TAB ─────────────────────────────────────────────────────────────────
+// ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ SCAN TAB ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
+// â”€â”€â”€ SCAN TAB â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 class _ScanTab extends StatelessWidget {
   const _ScanTab();
 
@@ -719,40 +855,115 @@ class _ScanTab extends StatelessWidget {
   Widget build(BuildContext context) {
     return SafeArea(
       child: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 200,
-              height: 200,
-              decoration: BoxDecoration(
-                color: const Color(0xFFEFF6FF),
-                borderRadius: BorderRadius.circular(20),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 200,
+                height: 200,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFEFF6FF),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: const Icon(Icons.qr_code_scanner_rounded,
+                    size: 80, color: Color(0xFF2563EB)),
               ),
-              child: const Icon(Icons.qr_code_scanner_rounded,
-                  size: 80, color: Color(0xFF2563EB)),
-            ),
-            const SizedBox(height: 24),
-            const Text('Scan QR Code',
-                style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF0F172A))),
-            const SizedBox(height: 8),
-            const Text('Arahkan kamera ke QR code parkir',
-                style: TextStyle(fontSize: 14, color: Color(0xFF64748B))),
-          ],
+              const SizedBox(height: 24),
+              const Text('Scan QR Code',
+                  style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF0F172A))),
+              const SizedBox(height: 8),
+              Text(
+                'Arahkan kamera ke QR code parkir',
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontSize: 14, color: Color(0xFF64748B)),
+              ),
+              const SizedBox(height: 28),
+              // Native: open real camera scanner
+              SizedBox(
+                width: double.infinity,
+                height: 52,
+                child: ElevatedButton.icon(
+                  onPressed: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const QRScanPage()),
+                  ),
+                  icon: const Icon(Icons.camera_alt_rounded),
+                  label: const Text('Buka Kamera Scan'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF2563EB),
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14)),
+                    elevation: 0,
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 }
 
-// ─── ALERTS TAB ──────────────────────────────────────────────────────────────
-class _AlertsTab extends StatelessWidget {
+// ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ ALERTS TAB ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
+class _AlertsTab extends StatefulWidget {
   final VoidCallback? onBack;
 
   const _AlertsTab({this.onBack});
+
+  @override
+  State<_AlertsTab> createState() => _AlertsTabState();
+}
+
+class _AlertsTabState extends State<_AlertsTab> {
+  bool _isLoading = true;
+  List<dynamic> _alerts = [];
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchAlerts();
+  }
+
+  Future<void> _fetchAlerts() async {
+    try {
+      final token = await context.read<AuthProvider>().getToken();
+      if (token == null) throw Exception("Tidak ada token");
+
+      // Use localhost for web/Chrome; 10.0.2.2 is Android emulator only
+      const baseUrl = String.fromEnvironment('API_URL', defaultValue: 'http://localhost:8080');
+      final res = await http.get(
+        Uri.parse('$baseUrl/api/v1/parking/alerts'),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+
+      if (res.statusCode == 200) {
+        final data = jsonDecode(res.body)['data'] as List;
+        if (mounted) {
+          setState(() {
+            _alerts = data;
+            _isLoading = false;
+          });
+        }
+      } else {
+        throw Exception("Gagal memuat notifikasi");
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _error = e.toString();
+          _isLoading = false;
+        });
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -765,7 +976,7 @@ class _AlertsTab extends StatelessWidget {
             child: Row(
               children: [
                 GestureDetector(
-                  onTap: onBack,
+                  onTap: widget.onBack,
                   child: const Icon(Icons.arrow_back, color: Color(0xFF0F172A)),
                 ),
                 const Expanded(
@@ -786,142 +997,72 @@ class _AlertsTab extends StatelessWidget {
           ),
           const Divider(height: 1, color: Color(0xFFE2E8F0)),
 
-          // List
           Expanded(
-            child: ListView(
-              padding: const EdgeInsets.all(16),
-              children: [
-                // Notification 1
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  margin: const EdgeInsets.only(bottom: 16),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: const Color(0xFFE2E8F0)),
-                  ),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                Container(
-                                  width: 8,
-                                  height: 8,
-                                  decoration: const BoxDecoration(
-                                    color: Color(0xFF2563EB),
-                                    shape: BoxShape.circle,
-                                  ),
+            child: _isLoading
+              ? const Center(child: CircularProgressIndicator(color: Color(0xFF2563EB)))
+              : _error != null
+                ? Center(child: Text(_error!, style: const TextStyle(color: Colors.red)))
+                : _alerts.isEmpty
+                  ? Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.notifications_off_rounded, size: 64, color: Color(0xFFCBD5E1)),
+                          const SizedBox(height: 16),
+                          const Text('Tidak Ada Notifikasi', style: TextStyle(color: Color(0xFF0F172A), fontSize: 16, fontWeight: FontWeight.bold)),
+                          const SizedBox(height: 8),
+                          const Text('Belum ada notifikasi atau pelanggaran', style: TextStyle(color: Color(0xFF64748B), fontSize: 13)),
+                        ],
+                      ),
+                    )
+                  : ListView.builder(
+                      padding: const EdgeInsets.all(16),
+                      itemCount: _alerts.length,
+                      itemBuilder: (ctx, i) {
+                        final a = _alerts[i];
+                        final fmt = DateFormat('dd MMM yyyy, HH:mm');
+                        final t = DateTime.parse(a['tanggal']).toLocal();
+                        return Container(
+                          padding: const EdgeInsets.all(16),
+                          margin: const EdgeInsets.only(bottom: 16),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF8FAFC),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: const Color(0xFFE2E8F0)),
+                          ),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        const Icon(Icons.warning_amber_rounded, color: Color(0xFFD97706), size: 16),
+                                        const SizedBox(width: 4),
+                                        Text(fmt.format(t), style: const TextStyle(color: Color(0xFF64748B), fontSize: 12, fontWeight: FontWeight.w500)),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 8),
+                                    const Text('Pelanggaran Parkir', style: TextStyle(color: Color(0xFF0F172A), fontSize: 16, fontWeight: FontWeight.bold, height: 1.2)),
+                                    const SizedBox(height: 4),
+                                    Text(a['jenis_pelanggaran'] ?? '-', style: const TextStyle(color: Color(0xFF475569), fontSize: 13)),
+                                    const SizedBox(height: 4),
+                                    Text('Poin Penalti: ${a['poin_penalti']}', style: const TextStyle(color: Color(0xFFDC2626), fontSize: 12, fontWeight: FontWeight.bold)),
+                                  ],
                                 ),
-                                const SizedBox(width: 8),
-                                const Text(
-                                  'Baru saja',
-                                  style: TextStyle(
-                                    color: Color(0xFF64748B),
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 8),
-                            const Text(
-                              'Slot tersedia di Zone B',
-                              style: TextStyle(
-                                color: Color(0xFF0F172A),
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
                               ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(8),
-                        child: Image.asset(
-                          'assets/images/maps.png',
-                          width: 80,
-                          height: 80,
-                          fit: BoxFit.cover,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-
-                // Notification 2
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  margin: const EdgeInsets.only(bottom: 16),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF8FAFC),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: const Color(0xFFE2E8F0)),
-                  ),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                const Icon(Icons.warning_amber_rounded,
-                                    color: Color(0xFFD97706), size: 16),
-                                const SizedBox(width: 4),
-                                const Text(
-                                  '2h ago',
-                                  style: TextStyle(
-                                    color: Color(0xFF64748B),
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 8),
-                            const Text(
-                              'Warning: cek Kunci Motor anda',
-                              style: TextStyle(
-                                color: Color(0xFF0F172A),
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                height: 1.2,
+                              const SizedBox(width: 16),
+                              Container(
+                                width: 60, height: 60,
+                                decoration: BoxDecoration(color: const Color(0xFFFEF3C7), borderRadius: BorderRadius.circular(8)),
+                                child: const Center(child: Icon(Icons.warning_rounded, color: Color(0xFFD97706), size: 30)),
                               ),
-                            ),
-                            const SizedBox(height: 4),
-                            const Text(
-                              'Satpam Telah menemukan kunci motor anda belum tercabut',
-                              style: TextStyle(
-                                color: Color(0xFF475569),
-                                fontSize: 13,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      Container(
-                        width: 80,
-                        height: 80,
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFFEF3C7),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: const Center(
-                          child: Icon(Icons.warning_rounded,
-                              color: Color(0xFFD97706), size: 40),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
           ),
         ],
       ),
@@ -929,7 +1070,7 @@ class _AlertsTab extends StatelessWidget {
   }
 }
 
-// ─── PROFILE TAB ──────────────────────────────────────────────────────────────
+// ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ PROFILE TAB ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
 class _ProfileTab extends StatelessWidget {
   final VoidCallback? onBack;
 
@@ -1183,7 +1324,18 @@ class _ProfileTab extends StatelessWidget {
                     ),
                     trailing: const Icon(Icons.chevron_right_rounded,
                         color: Color(0xFF64748B)),
-                    onTap: () {},
+                    onTap: () async {
+                      final uri = Uri.parse('https://wa.me/6281234567890?text=Halo%20Admin%2C%20saya%20butuh%20bantuan%20terkait%20aplikasi%20ParkirKampus.');
+                      if (await canLaunchUrl(uri)) {
+                        await launchUrl(uri, mode: LaunchMode.externalApplication);
+                      } else {
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Tidak dapat membuka WhatsApp'), backgroundColor: Color(0xFFDC2626)),
+                          );
+                        }
+                      }
+                    },
                   ),
                   
                   // Keep logout button at the bottom

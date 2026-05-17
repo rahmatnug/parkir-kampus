@@ -103,6 +103,10 @@ type ParkingRepository interface {
 	GetTotalPenaltyPoints(userID uint) (int, error)
 	BookSlotAndCreateTransaction(userID uint, kendaraanID uint, zonaID uint) (*Transaksi, *SlotParkir, error)
 	ReleaseSlotAndUpdateTransaction(userID uint) (*Transaksi, error)
+	GetAllZonesPublic() ([]ZonaParkir, error)
+	GetSlotsByZone(zonaID uint) ([]SlotParkir, error)
+	GetUserHistory(userID uint) ([]Transaksi, error)
+	GetUserAlerts(userID uint) ([]Penalti, error)
 }
 
 // ParkingEntryResult holds the outcome of a successful scan entry
@@ -115,6 +119,17 @@ type ParkingEntryResult struct {
 	YCoord      float64 `json:"y_coord"`
 }
 
+// ZoneStatus holds public occupancy info for a parking zone (used on the user dashboard)
+type ZoneStatus struct {
+	ID             uint    `json:"id"`
+	Nama           string  `json:"nama"`
+	KapasitasMaks  int     `json:"kapasitas_maksimal"`
+	Terisi         int     `json:"terisi_saat_ini"`
+	JenisKendaraan string  `json:"jenis_kendaraan"`
+	XCoord         float64 `json:"x_coord"`
+	YCoord         float64 `json:"y_coord"`
+}
+
 // ParkingUsecase defines the business logic for parking
 type ParkingUsecase interface {
 	TapIn(userID uint, kendaraanID uint, zonaID uint) (*Transaksi, string, error)
@@ -122,5 +137,8 @@ type ParkingUsecase interface {
 	AssignSlotFromWaitlist(zonaID uint) error
 	ProcessParkingEntry(userID uint, qrCode string) (*ParkingEntryResult, error)
 	ProcessParkingExit(userID uint) (*Transaksi, error)
+	GetUserHistory(userID uint) ([]Transaksi, error)
+	GetUserAlerts(userID uint) ([]Penalti, error)
 	GetCurrentParking(userID uint) (*ParkingEntryResult, error)
+	GetParkingStatus() ([]ZoneStatus, error)
 }

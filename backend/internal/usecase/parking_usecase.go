@@ -344,3 +344,68 @@ func (u *parkingUsecase) GetCurrentParking(userID uint) (*domain.ParkingEntryRes
 	}, nil
 }
 
+// GetParkingStatus returns public zone occupancy data with coordinates.
+// Terisi dihitung dari slot ber-status 'occupied' secara langsung,
+// bukan dari (Kapasitas - available) agar tidak salah jika jumlah slot
+// di DB tidak sama dengan nilai Kapasitas di tabel zona_parkir.
+func (u *parkingUsecase) GetParkingStatus() ([]domain.ZoneStatus, error) {
+	zones, err := u.repo.GetAllZonesPublic()
+	if err != nil {
+		return nil, err
+	}
+
+	var result []domain.ZoneStatus
+	for _, z := range zones {
+		// Ambil semua slot zona ini untuk menghitung jumlah aktual
+		slots, slotErr := u.repo.GetSlotsByZone(z.IDZona)
+		
+		var totalSlots int
+		var terisi int
+		var xCoord, yCoord float64
+
+		if slotErr == nil && len(slots) > 0 {
+			totalSlots = len(slots)
+			
+			// Hitung 'occupied' secara langsung — akurat tanpa asumsi Kapasitas
+			var sumX, sumY float64
+			for _, s := range slots {
+				if s.Status == "occupied" {
+					terisi++
+				}
+				sumX += s.XCoord
+				sumY += s.YCoord
+			}
+			n := float64(len(slots))
+			xCoord = sumX / n
+			yCoord = sumY / n
+		} else {
+			// Fallback jika slot belum di-seed: pakai Kapasitas zona
+			totalSlots = z.Kapasitas
+			terisi = 0
+			xCoord = 0.0
+			yCoord = 0.0
+		}
+
+		result = append(result, domain.ZoneStatus{
+			ID:             z.IDZona,
+			Nama:           z.NamaZona,
+			KapasitasMaks:  totalSlots, // total slot fisik, bukan Kapasitas di tabel zona
+			Terisi:         terisi,     // hitung langsung dari status 'occupied'
+			JenisKendaraan: z.JenisKendaraan,
+			XCoord:         xCoord,
+			YCoord:         yCoord,
+		})
+	}
+
+	return result, nil
+}
+
+func (u *parkingUsecase) GetUserHistory(userID uint) ([]domain.Transaksi, error) {
+	return u.repo.GetUserHistory(userID)
+}
+
+func (u *parkingUsecase) GetUserAlerts(userID uint) ([]domain.Penalti, error) {
+	return u.repo.GetUserAlerts(userID)
+}
+
+

@@ -3,20 +3,41 @@ class ParkingZone {
   final String nama;
   final int kapasitasMaksimal;
   final int terisiSaatIni;
+  final String jenisKendaraan;
+  final double xCoord;
+  final double yCoord;
 
   ParkingZone({
     required this.id,
     required this.nama,
     required this.kapasitasMaksimal,
     required this.terisiSaatIni,
+    this.jenisKendaraan = 'motor',
+    this.xCoord = 0.0,
+    this.yCoord = 0.0,
   });
+
+  /// Parsing int yang aman — menangani tipe int maupun String dari API
+  static int _safeInt(dynamic raw, {int fallback = 0}) {
+    if (raw == null) return fallback;
+    if (raw is int) return raw;
+    if (raw is double) return raw.toInt();
+    return int.tryParse(raw.toString()) ?? fallback;
+  }
 
   factory ParkingZone.fromJson(Map<String, dynamic> json) {
     return ParkingZone(
-      id: json['id'] ?? '',
-      nama: json['nama'] ?? '',
-      kapasitasMaksimal: json['kapasitas_maksimal'] ?? 0,
-      terisiSaatIni: json['terisi_saat_ini'] ?? 0,
+      id: (json['id'] ?? json['id_zona'] ?? '').toString(),
+      nama: (json['nama'] ?? json['nama_zona'] ?? '').toString(),
+      // Parsing aman: cek 'kapasitas_maksimal' dulu, fallback ke 'kapasitas'
+      kapasitasMaksimal: _safeInt(
+        json['kapasitas_maksimal'] ?? json['kapasitas'],
+      ),
+      // Parsing aman: tidak ada default ?? 0.8 atau nilai palsu di sini
+      terisiSaatIni: _safeInt(json['terisi_saat_ini']),
+      jenisKendaraan: (json['jenis_kendaraan'] ?? 'motor').toString(),
+      xCoord: (json['x_coord'] as num?)?.toDouble() ?? 0.0,
+      yCoord: (json['y_coord'] as num?)?.toDouble() ?? 0.0,
     );
   }
 
@@ -26,27 +47,23 @@ class ParkingZone {
       nama: nama,
       kapasitasMaksimal: kapasitasMaksimal,
       terisiSaatIni: terisiSaatIni ?? this.terisiSaatIni,
+      jenisKendaraan: jenisKendaraan,
+      xCoord: xCoord,
+      yCoord: yCoord,
     );
   }
-}
 
-final List<Map<String, dynamic>> dummyZonesJson = [
-  {"id": "1", "nama": "Zona A", "kapasitas_maksimal": 50, "terisi_saat_ini": 10},
-  {"id": "2", "nama": "Zona B", "kapasitas_maksimal": 30, "terisi_saat_ini": 30},
-  {"id": "3", "nama": "Zona C", "kapasitas_maksimal": 40, "terisi_saat_ini": 25},
-  {"id": "4", "nama": "Zona D", "kapasitas_maksimal": 20, "terisi_saat_ini": 5},
-  {"id": "5", "nama": "Zona E", "kapasitas_maksimal": 60, "terisi_saat_ini": 60},
-];
+  /// Available slots = capacity - occupied
+  int get tersedia => kapasitasMaksimal - terisiSaatIni;
 
-Stream<List<ParkingZone>> getParkingUpdates() async* {
-  var zones = dummyZonesJson.map((e) => ParkingZone.fromJson(e)).toList();
-  while (true) {
-    await Future.delayed(const Duration(seconds: 2));
-    zones = zones.map((z) {
-      int change = (DateTime.now().second % 2 == 0) ? 1 : -1;
-      int newVal = (z.terisiSaatIni + change).clamp(0, z.kapasitasMaksimal);
-      return z.copyWith(terisiSaatIni: newVal);
-    }).toList();
-    yield zones;
+  /// Occupancy ratio (0.0 to 1.0)
+  double get occupancyRatio =>
+      kapasitasMaksimal > 0 ? terisiSaatIni / kapasitasMaksimal : 0.0;
+
+  /// Zone letter (e.g. "A" from "Zone A")
+  String get letter {
+    final parts = nama.split(' ');
+    if (parts.length > 1) return parts.last[0];
+    return nama.isNotEmpty ? nama[0] : '?';
   }
 }

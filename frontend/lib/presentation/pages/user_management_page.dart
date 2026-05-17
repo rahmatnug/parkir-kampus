@@ -661,7 +661,15 @@ class _UserRowState extends State<_UserRow> {
               child: Align(
                 alignment: Alignment.centerLeft,
                 child: TextButton.icon(
-                  onPressed: () {},
+                  onPressed: () {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Riwayat parkir ${user['name']} — fitur detail log sedang dikembangkan'),
+                        backgroundColor: _kBlue,
+                        behavior: SnackBarBehavior.floating,
+                      ),
+                    );
+                  },
                   icon: const Icon(Icons.history_rounded, size: 16, color: _kBlue),
                   label: const Text('View Logs', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: _kBlue)),
                   style: TextButton.styleFrom(

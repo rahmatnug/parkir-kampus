@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 import '../providers/auth_provider.dart';
+import '../../core/config/app_config.dart';
 
 class UserEditProfilePage extends StatefulWidget {
   const UserEditProfilePage({super.key});
@@ -10,6 +13,150 @@ class UserEditProfilePage extends StatefulWidget {
 }
 
 class _UserEditProfilePageState extends State<UserEditProfilePage> {
+  late TextEditingController _platCtrl;
+  late TextEditingController _kendaraanCtrl;
+  bool _isLoading = false;
+  bool _hasChanges = false;
+
+  @override
+  void initState() {
+    super.initState();
+    final auth = context.read<AuthProvider>();
+    _platCtrl = TextEditingController(text: auth.platNomor ?? '');
+    _kendaraanCtrl = TextEditingController(text: auth.jenisKendaraan ?? '');
+    _platCtrl.addListener(_markChanged);
+    _kendaraanCtrl.addListener(_markChanged);
+  }
+
+  void _markChanged() {
+    if (!_hasChanges && mounted) setState(() => _hasChanges = true);
+  }
+
+  @override
+  void dispose() {
+    _platCtrl.dispose();
+    _kendaraanCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _saveProfile() async {
+    setState(() => _isLoading = true);
+    try {
+      final auth = context.read<AuthProvider>();
+      final token = await auth.getToken();
+      if (token == null) throw Exception('Tidak ada token');
+
+      final res = await http.put(
+        Uri.parse('${AppConfig.baseUrl}/api/user/profile'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({
+          'plat_nomor': _platCtrl.text.trim(),
+          'jenis_kendaraan': _kendaraanCtrl.text.trim(),
+        }),
+      ).timeout(const Duration(seconds: 10));
+
+      if (!mounted) return;
+
+      if (res.statusCode == 200) {
+        // Refresh provider data
+        await auth.refreshUserData();
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Profil berhasil diperbarui!'),
+            backgroundColor: Color(0xFF16A34A),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+        Navigator.pop(context);
+      } else {
+        final body = jsonDecode(res.body);
+        throw Exception(body['message'] ?? 'Gagal memperbarui profil');
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error: $e'),
+          backgroundColor: const Color(0xFFDC2626),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  void _showPhotoOptions() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 40, height: 4,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFE2E8F0),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(height: 20),
+              const Text('Foto Profil',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
+              const SizedBox(height: 4),
+              const Text('Fitur upload foto profil akan segera tersedia.',
+                style: TextStyle(fontSize: 13, color: Color(0xFF64748B))),
+              const SizedBox(height: 20),
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFF7ED),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: const Color(0xFFFED7AA)),
+                ),
+                child: const Row(
+                  children: [
+                    Icon(Icons.info_outline_rounded, color: Color(0xFFF59E0B), size: 20),
+                    SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        'Integrasi Supabase Storage sedang disiapkan. Saat ini Anda dapat mengedit data kendaraan.',
+                        style: TextStyle(fontSize: 12, color: Color(0xFF92400E), height: 1.4),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  style: OutlinedButton.styleFrom(
+                    side: const BorderSide(color: Color(0xFFE2E8F0)),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                  ),
+                  child: const Text('Tutup', style: TextStyle(color: Color(0xFF0F172A), fontWeight: FontWeight.w600)),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthProvider>();
@@ -43,176 +190,70 @@ class _UserEditProfilePageState extends State<UserEditProfilePage> {
           children: [
             // Avatar
             Center(
-              child: Stack(
-                children: [
-                  Container(
-                    width: 100,
-                    height: 100,
-                    decoration: const BoxDecoration(
-                      color: Color(0xFFEDCDB3), // Skin-ish background
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.person,
-                      size: 60,
-                      color: Colors.white,
-                    ),
-                  ),
-                  Positioned(
-                    bottom: 0,
-                    right: 0,
-                    child: Container(
-                      width: 32,
-                      height: 32,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF0052CC),
+              child: GestureDetector(
+                onTap: _showPhotoOptions,
+                child: Stack(
+                  children: [
+                    Container(
+                      width: 100,
+                      height: 100,
+                      decoration: const BoxDecoration(
+                        color: Color(0xFFDBEAFE),
                         shape: BoxShape.circle,
-                        border: Border.all(color: Colors.white, width: 2),
                       ),
-                      child: const Icon(
-                        Icons.edit,
-                        color: Colors.white,
-                        size: 16,
+                      child: ClipOval(
+                        child: (auth.profileImageUrl != null && auth.profileImageUrl!.isNotEmpty)
+                          ? Image.network(auth.profileImageUrl!,
+                              fit: BoxFit.cover, width: 100, height: 100,
+                              errorBuilder: (_, __, ___) => const Icon(Icons.person_rounded, size: 60, color: Color(0xFF2563EB)))
+                          : const Icon(Icons.person_rounded, size: 60, color: Color(0xFF2563EB)),
                       ),
                     ),
-                  ),
-                ],
+                    Positioned(
+                      bottom: 0,
+                      right: 0,
+                      child: Container(
+                        width: 32,
+                        height: 32,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF0052CC),
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.white, width: 2),
+                        ),
+                        child: const Icon(
+                          Icons.camera_alt_rounded,
+                          color: Colors.white,
+                          size: 16,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
             const SizedBox(height: 32),
 
-            // NAMA LENGKAP
-            const Text(
-              'NAMA LENGKAP',
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF64748B),
-              ),
-            ),
-            const SizedBox(height: 8),
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: const Color(0xFFE2E8F0), width: 1.5),
-              ),
-              child: Text(
-                auth.nama ?? '-',
-                style: const TextStyle(
-                  fontSize: 16,
-                  color: Color(0xFF0F172A),
-                ),
-              ),
-            ),
+            // NAMA LENGKAP (Read-only)
+            _buildReadOnlyField('NAMA LENGKAP', auth.nama ?? '-'),
             const SizedBox(height: 24),
 
-            // EMAIL KAMPUS
-            const Text(
-              'EMAIL KAMPUS',
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF64748B),
-              ),
-            ),
-            const SizedBox(height: 8),
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: const Color(0xFFE2E8F0), width: 1.5),
-              ),
-              child: Text(
-                auth.email ?? '-',
-                style: const TextStyle(
-                  fontSize: 16,
-                  color: Color(0xFF0F172A),
-                ),
-              ),
-            ),
+            // EMAIL KAMPUS (Read-only)
+            _buildReadOnlyField('EMAIL KAMPUS', auth.email ?? '-'),
             const SizedBox(height: 24),
 
-            // PLAT NOMOR & JENIS KENDARAAN
+            // NIM (Read-only)
+            _buildReadOnlyField('NIM', auth.nim ?? '-'),
+            const SizedBox(height: 24),
+
+            // PLAT NOMOR & JENIS KENDARAAN (Editable)
             Row(
               children: [
                 Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'PLAT NOMOR',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF64748B),
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 16),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: const Color(0xFFE2E8F0), width: 1.5),
-                        ),
-                        child: Text(
-                          auth.platNomor ?? '-',
-                          style: const TextStyle(
-                            fontSize: 16,
-                            color: Color(0xFF0F172A),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
+                  child: _buildEditableField('PLAT NOMOR', _platCtrl, 'L 1234 AB'),
                 ),
                 const SizedBox(width: 16),
                 Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'JENIS KENDARAAN',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF64748B),
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 16),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: const Color(0xFFE2E8F0), width: 1.5),
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              auth.jenisKendaraan ?? '-',
-                              style: const TextStyle(
-                                fontSize: 16,
-                                color: Color(0xFF0F172A),
-                              ),
-                            ),
-                            Icon(Icons.keyboard_arrow_down_rounded,
-                                color: Color(0xFF64748B)),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
+                  child: _buildEditableField('JENIS KENDARAAN', _kendaraanCtrl, 'Motor / Mobil'),
                 ),
               ],
             ),
@@ -223,11 +264,14 @@ class _UserEditProfilePageState extends State<UserEditProfilePage> {
               width: double.infinity,
               height: 56,
               child: ElevatedButton.icon(
-                onPressed: () => Navigator.pop(context),
-                icon: const Icon(Icons.check_circle, color: Colors.white),
-                label: const Text(
-                  'Simpan Perubahan',
-                  style: TextStyle(
+                onPressed: (_isLoading || !_hasChanges) ? null : _saveProfile,
+                icon: _isLoading
+                  ? const SizedBox(width: 20, height: 20,
+                      child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                  : const Icon(Icons.check_circle, color: Colors.white),
+                label: Text(
+                  _isLoading ? 'Menyimpan...' : 'Simpan Perubahan',
+                  style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
                     color: Colors.white,
@@ -235,6 +279,7 @@ class _UserEditProfilePageState extends State<UserEditProfilePage> {
                 ),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF2563EB),
+                  disabledBackgroundColor: const Color(0xFF93B5F1),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(28),
                   ),
@@ -245,6 +290,65 @@ class _UserEditProfilePageState extends State<UserEditProfilePage> {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildReadOnlyField(String label, String value) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label,
+          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF64748B))),
+        const SizedBox(height: 8),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+          decoration: BoxDecoration(
+            color: const Color(0xFFF8FAFC),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: const Color(0xFFE2E8F0), width: 1.5),
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(value,
+                  style: const TextStyle(fontSize: 16, color: Color(0xFF64748B))),
+              ),
+              const Icon(Icons.lock_outline_rounded, size: 16, color: Color(0xFFCBD5E1)),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildEditableField(String label, TextEditingController ctrl, String hint) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label,
+          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF64748B))),
+        const SizedBox(height: 8),
+        TextFormField(
+          controller: ctrl,
+          style: const TextStyle(fontSize: 16, color: Color(0xFF0F172A)),
+          decoration: InputDecoration(
+            hintText: hint,
+            hintStyle: const TextStyle(color: Color(0xFFCBD5E1), fontSize: 14),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+            filled: true,
+            fillColor: Colors.white,
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: Color(0xFFE2E8F0), width: 1.5),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: Color(0xFF2563EB), width: 1.5),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

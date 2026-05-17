@@ -378,7 +378,14 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                           ),
                         ),
                         GestureDetector(
-                          onTap: () {},
+                          onTap: () {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Dokumentasi ParkirKampus — segera tersedia'),
+                                behavior: SnackBarBehavior.floating,
+                              ),
+                            );
+                          },
                           child: const Text(
                             'view documentation',
                             style: TextStyle(

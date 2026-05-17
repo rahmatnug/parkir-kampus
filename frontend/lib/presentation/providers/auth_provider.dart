@@ -19,6 +19,7 @@ class AuthProvider extends ChangeNotifier {
   String? _nim;
   String? _platNomor;
   String? _jenisKendaraan;
+  String? _profileImageUrl;
 
   AuthStatus get status => _status;
   String? get errorMessage => _errorMessage;
@@ -33,6 +34,7 @@ class AuthProvider extends ChangeNotifier {
   String? get nim => _nim;
   String? get platNomor => _platNomor;
   String? get jenisKendaraan => _jenisKendaraan;
+  String? get profileImageUrl => _profileImageUrl;
 
   /// Simulasi data user (Bisa diubah untuk testing)
   void setMockStatus({int penalty = 0, bool blacklisted = false, String reason = ""}) {
@@ -110,6 +112,13 @@ class AuthProvider extends ChangeNotifier {
     _nim = data['nim'];
     _platNomor = data['plat_nomor'];
     _jenisKendaraan = data['jenis_kendaraan'];
+    _profileImageUrl = data['profile_image_url'];
+  }
+
+  /// Public method to refresh user data from the backend and notify listeners.
+  Future<void> refreshUserData() async {
+    await _loadUserData();
+    notifyListeners();
   }
 
   void _extractRole(String token) {

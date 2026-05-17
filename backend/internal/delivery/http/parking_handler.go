@@ -28,7 +28,10 @@ func NewParkingHandler(r *gin.Engine, us domain.ParkingUsecase) {
 	scan := r.Group("/api/v1/parking")
 	scan.Use(AuthMiddleware())
 	{
+		scan.GET("/status", handler.GetParkingStatus)
 		scan.GET("/current", handler.GetCurrentParking)
+		scan.GET("/history", handler.GetHistory)
+		scan.GET("/alerts", handler.GetAlerts)
 		scan.POST("/scan", handler.ScanQR)
 		scan.POST("/exit", handler.ExitParking)
 	}
@@ -201,6 +204,52 @@ func (h *ParkingHandler) ExitParking(c *gin.Context) {
 		"status":  "success",
 		"message": "Berhasil keluar parkir",
 		"data":    tx,
+	})
+}
+
+// GetParkingStatus handles GET /api/v1/parking/status
+// Returns zone occupancy data for the user dashboard interactive map.
+func (h *ParkingHandler) GetParkingStatus(c *gin.Context) {
+	data, err := h.Usecase.GetParkingStatus()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"status":  "error",
+			"message": err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"status": "success",
+		"data":   data,
+	})
+}
+
+// GetHistory handles GET /api/v1/parking/history
+func (h *ParkingHandler) GetHistory(c *gin.Context) {
+	userID := c.MustGet("id_user").(uint)
+	txs, err := h.Usecase.GetUserHistory(userID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"status": "error", "message": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"status": "success",
+		"data":   txs,
+	})
+}
+
+// GetAlerts handles GET /api/v1/parking/alerts
+func (h *ParkingHandler) GetAlerts(c *gin.Context) {
+	userID := c.MustGet("id_user").(uint)
+	alerts, err := h.Usecase.GetUserAlerts(userID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"status": "error", "message": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"status": "success",
+		"data":   alerts,
 	})
 }
 

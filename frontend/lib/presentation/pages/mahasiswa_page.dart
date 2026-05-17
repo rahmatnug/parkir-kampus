@@ -62,7 +62,14 @@ class MahasiswaPage extends StatelessWidget {
                     ),
                     actions: [
                       TextButton(
-                        onPressed: () {},
+                        onPressed: () {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Detail penalti tersedia di menu Profil'),
+                              behavior: SnackBarBehavior.floating,
+                            ),
+                          );
+                        },
                         child: const Text(
                           "DETAIL",
                           style: TextStyle(
@@ -109,8 +116,9 @@ class _StatusView extends StatelessWidget {
           StreamBuilder<VehicleStatus>(
             stream: getVehicleStatusUpdates(),
             builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting)
+              if (snapshot.connectionState == ConnectionState.waiting) {
                 return const CircularProgressIndicator();
+              }
               if (snapshot.hasError) return Text("Error: ${snapshot.error}");
               return StatusCard(status: snapshot.data!);
             },

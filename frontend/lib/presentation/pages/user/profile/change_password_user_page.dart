@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
-import '../../../widgets/global_parking_layout.dart';
+import 'package:provider/provider.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import '../../../providers/auth_provider.dart';
+import '../../../../core/config/app_config.dart';
 
 class ChangePasswordUserPage extends StatefulWidget {
   const ChangePasswordUserPage({super.key});
@@ -26,24 +30,70 @@ class _ChangePasswordUserPageState extends State<ChangePasswordUserPage> {
     super.dispose();
   }
 
-  void _submit() {
+  bool _isLoading = false;
+
+  Future<void> _submit() async {
     if (_formKey.currentState!.validate()) {
-      // TODO: Panggil BLoC/Service khusus User
-      // context.read<ChangePasswordUserBloc>().add(UpdatePasswordEvent(...));
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Memproses perubahan password User...'),
-          backgroundColor: Color(0xFF1E70EB),
-        ),
-      );
+      setState(() => _isLoading = true);
+      try {
+        final token = await context.read<AuthProvider>().getToken();
+        if (token == null) throw Exception("Tidak ada token");
+
+        final res = await http.put(
+          Uri.parse('${AppConfig.baseUrl}/api/user/change-password'),
+          headers: {
+            'Authorization': 'Bearer $token',
+            'Content-Type': 'application/json',
+          },
+          body: jsonEncode({
+            'current_password': _oldPasswordController.text,
+            'new_password': _newPasswordController.text,
+          }),
+        );
+
+        if (res.statusCode == 200) {
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Password berhasil diperbarui!'), backgroundColor: Colors.green),
+          );
+          Navigator.pop(context);
+        } else {
+          final err = jsonDecode(res.body)['message'] ?? 'Gagal mengganti password';
+          throw Exception(err);
+        }
+      } catch (e) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.toString()), backgroundColor: Colors.red),
+        );
+      } finally {
+        if (mounted) setState(() => _isLoading = false);
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return GlobalParkingLayout(
-      title: 'Ganti Password',
-      currentIndex: 3, // Menandakan navigasi di tab Profile
+    return Scaffold(
+      backgroundColor: Colors.white,
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_rounded, color: Color(0xFF111827)),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+        title: const Text(
+          'Ganti Password',
+          style: TextStyle(
+            color: Color(0xFF111827),
+            fontFamily: 'Montserrat',
+            fontWeight: FontWeight.w700,
+            fontSize: 18,
+          ),
+        ),
+        centerTitle: true,
+      ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24.0),
         child: Form(
@@ -62,7 +112,7 @@ class _ChangePasswordUserPageState extends State<ChangePasswordUserPage> {
                         shape: BoxShape.circle,
                       ),
                       child: const Icon(
-                        Icons.settings_backup_restore, // Refresh/lock alternative
+                        Icons.settings_backup_restore,
                         size: 40,
                         color: Color(0xFF1E70EB),
                       ),
@@ -159,7 +209,7 @@ class _ChangePasswordUserPageState extends State<ChangePasswordUserPage> {
                 width: double.infinity,
                 height: 56,
                 child: ElevatedButton(
-                  onPressed: _submit,
+                  onPressed: _isLoading ? null : _submit,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF1E70EB),
                     foregroundColor: Colors.white,
@@ -167,21 +217,23 @@ class _ChangePasswordUserPageState extends State<ChangePasswordUserPage> {
                       borderRadius: BorderRadius.circular(28),
                     ),
                   ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: const [
-                      Text(
-                        'Update Password',
-                        style: TextStyle(
-                          fontFamily: 'Montserrat',
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
+                  child: _isLoading
+                      ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Colors.white))
+                      : Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: const [
+                            Text(
+                              'Update Password',
+                              style: TextStyle(
+                                fontFamily: 'Montserrat',
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            SizedBox(width: 8),
+                            Icon(Icons.arrow_forward),
+                          ],
                         ),
-                      ),
-                      SizedBox(width: 8),
-                      Icon(Icons.arrow_forward),
-                    ],
-                  ),
                 ),
               ),
               const SizedBox(height: 24),

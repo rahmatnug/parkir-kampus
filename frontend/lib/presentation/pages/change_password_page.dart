@@ -266,8 +266,9 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
               validator: (v) {
                 if (v == null || v.isEmpty) return 'Field ini wajib diisi';
                 if (!_hasMinLength) return 'Minimal 8 karakter';
-                if (!_notSameAsCurrent)
+                if (!_notSameAsCurrent) {
                   return 'Password baru tidak boleh sama dengan yang lama';
+                }
                 return null;
               },
             ),

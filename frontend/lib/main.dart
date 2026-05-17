@@ -41,7 +41,6 @@ class ParkirkampusApp extends StatelessWidget {
           elevation: 4,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
         ),
-        dialogBackgroundColor: Colors.white,
         dialogTheme: const DialogThemeData(
           backgroundColor: Colors.white,
           surfaceTintColor: Colors.transparent,

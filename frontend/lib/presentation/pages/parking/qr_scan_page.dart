@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:provider/provider.dart';
@@ -13,9 +14,10 @@ class QRScanPage extends StatefulWidget {
 }
 
 class _QRScanPageState extends State<QRScanPage>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   late MobileScannerController cameraController;
   late AnimationController _animationController;
+  late AnimationController _shimmerController;
   bool isScanning = true;
   bool _isProcessing = false;
 
@@ -33,6 +35,11 @@ class _QRScanPageState extends State<QRScanPage>
       duration: const Duration(seconds: 3),
     )..repeat(reverse: true);
 
+    _shimmerController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1500),
+    )..repeat();
+
     // Reset scan state when entering this page
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<ParkingProvider>().resetScanState();
@@ -43,6 +50,7 @@ class _QRScanPageState extends State<QRScanPage>
   void dispose() {
     cameraController.dispose();
     _animationController.dispose();
+    _shimmerController.dispose();
     super.dispose();
   }
 
@@ -117,11 +125,32 @@ class _QRScanPageState extends State<QRScanPage>
       );
     } else {
       // Show error bottom sheet
+      String title;
+      IconData errorIcon;
+      Color errorColor;
+
+      switch (provider.scanErrorCode) {
+        case 'NO_VEHICLE':
+          title = 'Profil Kendaraan Kosong';
+          errorIcon = Icons.directions_car_outlined;
+          errorColor = const Color(0xFFF59E0B);
+          break;
+        case 'ALREADY_PARKED':
+          title = 'Sesi Parkir Aktif';
+          errorIcon = Icons.local_parking_rounded;
+          errorColor = const Color(0xFF3B82F6);
+          break;
+        default:
+          title = 'Gagal Memproses QR';
+          errorIcon = Icons.warning_amber_rounded;
+          errorColor = const Color(0xFFEF4444);
+      }
+
       _showErrorSheet(
-        provider.scanErrorCode == 'NO_VEHICLE'
-            ? 'Profil Kendaraan Kosong'
-            : 'Gagal Memproses QR',
+        title,
         provider.scanErrorMessage ?? 'Terjadi kesalahan, silakan coba lagi.',
+        icon: errorIcon,
+        iconColor: errorColor,
       );
 
       Future.delayed(const Duration(seconds: 3), () {
@@ -146,8 +175,8 @@ class _QRScanPageState extends State<QRScanPage>
         decoration: const BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.only(
-            topLeft: Radius.circular(28),
-            topRight: Radius.circular(28),
+            topLeft: Radius.circular(32),
+            topRight: Radius.circular(32),
           ),
         ),
         child: Column(
@@ -163,13 +192,23 @@ class _QRScanPageState extends State<QRScanPage>
                 borderRadius: BorderRadius.circular(4),
               ),
             ),
-            // Spinner
-            const SizedBox(
-              width: 56,
-              height: 56,
-              child: CircularProgressIndicator(
-                strokeWidth: 4,
-                color: Color(0xFF1E70EB),
+            // Animated spinner with glow
+            Container(
+              width: 72,
+              height: 72,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: const Color(0xFF1E70EB).withValues(alpha: 0.08),
+              ),
+              child: const Center(
+                child: SizedBox(
+                  width: 48,
+                  height: 48,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 4,
+                    color: Color(0xFF1E70EB),
+                  ),
+                ),
               ),
             ),
             const SizedBox(height: 28),
@@ -192,12 +231,12 @@ class _QRScanPageState extends State<QRScanPage>
               ),
             ),
             const SizedBox(height: 32),
-            // Skeleton shimmer bars
-            _buildShimmerBar(),
+            // Shimmer skeleton bars
+            _ShimmerBar(controller: _shimmerController, width: double.infinity),
             const SizedBox(height: 12),
-            _buildShimmerBar(),
+            _ShimmerBar(controller: _shimmerController, width: double.infinity, delay: 0.15),
             const SizedBox(height: 12),
-            _buildShimmerBar(),
+            _ShimmerBar(controller: _shimmerController, width: double.infinity, delay: 0.3),
             const SizedBox(height: 16),
           ],
         ),
@@ -205,18 +244,10 @@ class _QRScanPageState extends State<QRScanPage>
     );
   }
 
-  Widget _buildShimmerBar() {
-    return Container(
-      width: double.infinity,
-      height: 48,
-      decoration: BoxDecoration(
-        color: const Color(0xFFF1F5F9),
-        borderRadius: BorderRadius.circular(12),
-      ),
-    );
-  }
-
-  void _showErrorSheet(String title, String message) {
+  void _showErrorSheet(String title, String message, {
+    IconData icon = Icons.warning_amber_rounded,
+    Color iconColor = const Color(0xFFEF4444),
+  }) {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
@@ -245,11 +276,10 @@ class _QRScanPageState extends State<QRScanPage>
               width: 64,
               height: 64,
               decoration: BoxDecoration(
-                color: const Color(0xFFFEE2E2),
+                color: iconColor.withValues(alpha: 0.12),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.warning_amber_rounded,
-                  color: Color(0xFFEF4444), size: 36),
+              child: Icon(icon, color: iconColor, size: 36),
             ),
             const SizedBox(height: 20),
             Text(
@@ -304,7 +334,8 @@ class _QRScanPageState extends State<QRScanPage>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return SafeArea(
+      child: Scaffold(
       backgroundColor: const Color(0xFF0A0F1E),
       extendBodyBehindAppBar: true,
       appBar: AppBar(
@@ -342,50 +373,90 @@ class _QRScanPageState extends State<QRScanPage>
 
           // Instruction text below viewfinder
           Positioned(
-            bottom: 180,
+            bottom: kIsWeb ? 230 : 180,
             left: 0,
             right: 0,
-            child: Text(
-              'Scan barcode yang ada\ndi zona parkir',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: Colors.white.withOpacity(0.85),
-                fontSize: 16,
-                fontWeight: FontWeight.w500,
-                height: 1.4,
-              ),
+            child: Column(
+              children: [
+                const Text(
+                  'Scan barcode yang ada\ndi zona parkir',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    height: 1.4,
+                  ),
+                ),
+              ],
             ),
           ),
+
+          if (kIsWeb)
+            Positioned(
+              bottom: 160,
+              left: 40,
+              right: 40,
+              child: ElevatedButton.icon(
+                onPressed: _isProcessing
+                    ? null
+                    : () => _processScan('Zone A'),
+                icon: _isProcessing
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : const Icon(Icons.bug_report_rounded),
+                label: Text(_isProcessing
+                    ? 'Memproses...'
+                    : 'Simulasi Bypass Scan (Debug)'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: _isProcessing
+                      ? const Color(0xFFD97706)
+                      : const Color(0xFFF59E0B),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14)),
+                  elevation: 0,
+                ),
+              ),
+            ),
 
           // Bottom Controls
           Positioned(
             bottom: 60,
-            left: 0,
-            right: 0,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
+            left: 32,
+            right: 32,
+            child: Stack(
+              alignment: Alignment.center,
               children: [
                 // Flash Toggle
-                _buildControlButton(
-                  size: 56,
-                  child: ValueListenableBuilder<MobileScannerState>(
-                    valueListenable: cameraController,
-                    builder: (context, state, child) {
-                      final isOn = state.torchState == TorchState.on;
-                      return Icon(
-                        isOn
-                            ? Icons.flashlight_on_rounded
-                            : Icons.flashlight_off_rounded,
-                        color: isOn ? Colors.amber : Colors.white70,
-                        size: 24,
-                      );
-                    },
+                Positioned(
+                  left: 0,
+                  child: _buildControlButton(
+                    size: 56,
+                    child: ValueListenableBuilder<MobileScannerState>(
+                      valueListenable: cameraController,
+                      builder: (context, state, child) {
+                        final isOn = state.torchState == TorchState.on;
+                        return Icon(
+                          isOn
+                              ? Icons.flashlight_on_rounded
+                              : Icons.flashlight_off_rounded,
+                          color: isOn ? Colors.amber : Colors.white,
+                          size: 24,
+                        );
+                      },
+                    ),
+                    onTap: () => cameraController.toggleTorch(),
+                    isAccent: false,
                   ),
-                  onTap: () => cameraController.toggleTorch(),
-                  isAccent: false,
                 ),
-
-                const SizedBox(width: 24),
 
                 // Switch Camera (primary action)
                 _buildControlButton(
@@ -403,6 +474,7 @@ class _QRScanPageState extends State<QRScanPage>
           ),
         ],
       ),
+    ),
     );
   }
 
@@ -411,35 +483,94 @@ class _QRScanPageState extends State<QRScanPage>
     required Widget child,
     required VoidCallback onTap,
     required bool isAccent,
+    String? label,
   }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: size,
-        height: size,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          color: isAccent
-              ? const Color(0xFF1E70EB)
-              : Colors.white.withOpacity(0.12),
-          border: Border.all(
-            color: isAccent
-                ? const Color(0xFF1E70EB)
-                : Colors.white.withOpacity(0.2),
-            width: 2,
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        GestureDetector(
+          onTap: onTap,
+          child: Container(
+            width: size,
+            height: size,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: isAccent
+                  ? const Color(0xFF3B82F6)
+                  : Colors.black.withValues(alpha: 0.5),
+              border: Border.all(
+                color: isAccent
+                    ? const Color(0xFF3B82F6)
+                    : Colors.white.withValues(alpha: 0.1),
+                width: 2,
+              ),
+              boxShadow: isAccent
+                  ? [
+                      BoxShadow(
+                        color: const Color(0xFF3B82F6).withValues(alpha: 0.5),
+                        blurRadius: 24,
+                        spreadRadius: 6,
+                      ),
+                    ]
+                  : [],
+            ),
+            child: Center(child: child),
           ),
-          boxShadow: isAccent
-              ? [
-                  BoxShadow(
-                    color: const Color(0xFF1E70EB).withOpacity(0.45),
-                    blurRadius: 24,
-                    spreadRadius: 6,
-                  ),
-                ]
-              : [],
         ),
-        child: Center(child: child),
-      ),
+        if (label != null) ...[
+          const SizedBox(height: 6),
+          Text(
+            label,
+            style: TextStyle(
+              color: Colors.white.withValues(alpha: 0.7),
+              fontSize: 11,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+// ──────────────────────────────────────────────────────────────
+// Shimmer Bar Widget for Processing Sheet
+// ──────────────────────────────────────────────────────────────
+class _ShimmerBar extends StatelessWidget {
+  final AnimationController controller;
+  final double width;
+  final double delay;
+
+  const _ShimmerBar({
+    required this.controller,
+    required this.width,
+    this.delay = 0.0,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: controller,
+      builder: (context, child) {
+        final value = ((controller.value + delay) % 1.0);
+        return Container(
+          width: width,
+          height: 48,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            gradient: LinearGradient(
+              begin: Alignment(-1.0 + 2.0 * value, 0),
+              end: Alignment(-1.0 + 2.0 * value + 1.0, 0),
+              colors: const [
+                Color(0xFFF1F5F9),
+                Color(0xFFE2E8F0),
+                Color(0xFFF1F5F9),
+              ],
+              stops: const [0.0, 0.5, 1.0],
+            ),
+          ),
+        );
+      },
     );
   }
 }
@@ -467,7 +598,7 @@ class _ScannerOverlayPainter extends CustomPainter {
     final cornerRadius = 20.0;
 
     // 1. Draw the dark overlay mask
-    final maskPaint = Paint()..color = const Color(0xFF0A0F1E).withOpacity(0.82);
+    final maskPaint = Paint()..color = const Color(0xFF0A0F1E).withValues(alpha: 0.82);
     final path = Path()
       ..addRect(Rect.fromLTWH(0, 0, width, height))
       ..addRRect(RRect.fromRectAndRadius(scanRect, Radius.circular(cornerRadius)))
@@ -475,15 +606,28 @@ class _ScannerOverlayPainter extends CustomPainter {
 
     canvas.drawPath(path, maskPaint);
 
-    // 2. Draw rounded corner brackets (L-shaped)
+    // 2. Draw rounded corner brackets (L-shaped) with glow
     final cornerPaint = Paint()
-      ..color = const Color(0xFF1E70EB)
+      ..color = const Color(0xFF3B82F6)
       ..strokeWidth = 4.0
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round;
 
+    final glowCornerPaint = Paint()
+      ..color = const Color(0xFF3B82F6).withValues(alpha: 0.4)
+      ..strokeWidth = 8.0
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4);
+
     const cornerLen = 36.0;
     final r = cornerRadius;
+
+    // Helper to draw a corner with both glow and crisp line
+    void drawCorner(Path cornerPath) {
+      canvas.drawPath(cornerPath, glowCornerPaint);
+      canvas.drawPath(cornerPath, cornerPaint);
+    }
 
     // Top-Left corner
     final tlPath = Path()
@@ -492,7 +636,7 @@ class _ScannerOverlayPainter extends CustomPainter {
       ..quadraticBezierTo(
           scanRect.left, scanRect.top, scanRect.left + r, scanRect.top)
       ..lineTo(scanRect.left + cornerLen, scanRect.top);
-    canvas.drawPath(tlPath, cornerPaint);
+    drawCorner(tlPath);
 
     // Top-Right corner
     final trPath = Path()
@@ -501,7 +645,7 @@ class _ScannerOverlayPainter extends CustomPainter {
       ..quadraticBezierTo(
           scanRect.right, scanRect.top, scanRect.right, scanRect.top + r)
       ..lineTo(scanRect.right, scanRect.top + cornerLen);
-    canvas.drawPath(trPath, cornerPaint);
+    drawCorner(trPath);
 
     // Bottom-Left corner
     final blPath = Path()
@@ -510,7 +654,7 @@ class _ScannerOverlayPainter extends CustomPainter {
       ..quadraticBezierTo(
           scanRect.left, scanRect.bottom, scanRect.left + r, scanRect.bottom)
       ..lineTo(scanRect.left + cornerLen, scanRect.bottom);
-    canvas.drawPath(blPath, cornerPaint);
+    drawCorner(blPath);
 
     // Bottom-Right corner
     final brPath = Path()
@@ -519,7 +663,7 @@ class _ScannerOverlayPainter extends CustomPainter {
       ..quadraticBezierTo(
           scanRect.right, scanRect.bottom, scanRect.right, scanRect.bottom - r)
       ..lineTo(scanRect.right, scanRect.bottom - cornerLen);
-    canvas.drawPath(brPath, cornerPaint);
+    drawCorner(brPath);
 
     // 3. Draw animated laser beam
     final laserY =
@@ -530,11 +674,11 @@ class _ScannerOverlayPainter extends CustomPainter {
       final glowPaint = Paint()
         ..shader = LinearGradient(
           colors: [
-            const Color(0xFF1E70EB).withOpacity(0.0),
-            const Color(0xFF1E70EB).withOpacity(0.6),
-            const Color(0xFF60A5FA).withOpacity(0.8),
-            const Color(0xFF1E70EB).withOpacity(0.6),
-            const Color(0xFF1E70EB).withOpacity(0.0),
+            const Color(0xFF1E70EB).withValues(alpha: 0.0),
+            const Color(0xFF1E70EB).withValues(alpha: 0.6),
+            const Color(0xFF60A5FA).withValues(alpha: 0.8),
+            const Color(0xFF1E70EB).withValues(alpha: 0.6),
+            const Color(0xFF1E70EB).withValues(alpha: 0.0),
           ],
         ).createShader(
             Rect.fromLTWH(scanRect.left, laserY - 16, scanRect.width, 32));
@@ -549,11 +693,11 @@ class _ScannerOverlayPainter extends CustomPainter {
       final laserPaint = Paint()
         ..shader = LinearGradient(
           colors: [
-            const Color(0xFF1E70EB).withOpacity(0.0),
+            const Color(0xFF1E70EB).withValues(alpha: 0.0),
             const Color(0xFF60A5FA),
             const Color(0xFF93C5FD),
             const Color(0xFF60A5FA),
-            const Color(0xFF1E70EB).withOpacity(0.0),
+            const Color(0xFF1E70EB).withValues(alpha: 0.0),
           ],
         ).createShader(
             Rect.fromLTWH(scanRect.left, laserY - 1, scanRect.width, 2));

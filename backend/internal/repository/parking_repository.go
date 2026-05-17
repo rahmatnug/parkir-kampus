@@ -202,3 +202,30 @@ func (r *parkingRepository) ReleaseSlotAndUpdateTransaction(userID uint) (*domai
 	return &resultTx, nil
 }
 
+// GetAllZonesPublic returns all active parking zones (no admin auth required).
+func (r *parkingRepository) GetAllZonesPublic() ([]domain.ZonaParkir, error) {
+	var zones []domain.ZonaParkir
+	err := r.db.Where("status = ?", "active").Order("nama_zona ASC").Find(&zones).Error
+	return zones, err
+}
+
+// GetSlotsByZone returns all slots for a given zone.
+func (r *parkingRepository) GetSlotsByZone(zonaID uint) ([]domain.SlotParkir, error) {
+	var slots []domain.SlotParkir
+	err := r.db.Where("id_zona = ?", zonaID).Order("nomor_slot ASC").Find(&slots).Error
+	return slots, err
+}
+
+func (r *parkingRepository) GetUserHistory(userID uint) ([]domain.Transaksi, error) {
+	var txs []domain.Transaksi
+	err := r.db.Preload("Slot.Zona").Preload("Kendaraan").Where("id_user = ?", userID).Order("waktu_masuk DESC").Find(&txs).Error
+	return txs, err
+}
+
+func (r *parkingRepository) GetUserAlerts(userID uint) ([]domain.Penalti, error) {
+	var alerts []domain.Penalti
+	err := r.db.Where("id_user = ?", userID).Order("tanggal DESC").Find(&alerts).Error
+	return alerts, err
+}
+
+
