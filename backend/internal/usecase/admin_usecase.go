@@ -14,11 +14,13 @@ const BlacklistThreshold = 100
 
 type adminUsecase struct {
 	adminRepo domain.AdminRepository
+	wsHub     domain.WSHub
 }
 
-func NewAdminUsecase(repo domain.AdminRepository) domain.AdminUsecase {
+func NewAdminUsecase(repo domain.AdminRepository, wsHub domain.WSHub) domain.AdminUsecase {
 	return &adminUsecase{
 		adminRepo: repo,
+		wsHub:     wsHub,
 	}
 }
 
@@ -118,7 +120,7 @@ func (u *adminUsecase) RemovePenalty(userID uint) error {
 // ─── Zone CRUD ──────────────────────────────────────────────────────────────
 
 // CreateZone ensures there is no duplicate name and capacity is valid.
-func (u *adminUsecase) CreateZone(namaZona string, deskripsi string, kapasitas int) error {
+func (u *adminUsecase) CreateZone(namaZona string, deskripsi string, kapasitas int, jenisKendaraan string) error {
 	namaZona = strings.TrimSpace(namaZona)
 	if namaZona == "" {
 		return errors.New("nama zona tidak boleh kosong")
@@ -134,12 +136,17 @@ func (u *adminUsecase) CreateZone(namaZona string, deskripsi string, kapasitas i
 	}
 
 	zone := &domain.ZonaParkir{
-		NamaZona:  namaZona,
-		Deskripsi: deskripsi,
-		Kapasitas: kapasitas,
-		Status:    "active",
+		NamaZona:       namaZona,
+		Deskripsi:      deskripsi,
+		Kapasitas:      kapasitas,
+		JenisKendaraan: jenisKendaraan,
+		Status:         "active",
 	}
-	return u.adminRepo.CreateZone(zone)
+	err := u.adminRepo.CreateZone(zone)
+	if err == nil && u.wsHub != nil {
+		u.wsHub.NotifyLayoutUpdate()
+	}
+	return err
 }
 
 func (u *adminUsecase) GetAllZones() ([]domain.ZoneWithSlots, error) {
@@ -147,7 +154,7 @@ func (u *adminUsecase) GetAllZones() ([]domain.ZoneWithSlots, error) {
 }
 
 // UpdateZone validates before delegating to repository.
-func (u *adminUsecase) UpdateZone(zonaID uint, namaZona string, deskripsi string, kapasitas int) error {
+func (u *adminUsecase) UpdateZone(zonaID uint, namaZona string, deskripsi string, kapasitas int, jenisKendaraan string) error {
 	if zonaID == 0 {
 		return errors.New("zona ID tidak valid")
 	}
@@ -166,19 +173,28 @@ func (u *adminUsecase) UpdateZone(zonaID uint, namaZona string, deskripsi string
 	}
 
 	zone := &domain.ZonaParkir{
-		IDZona:    zonaID,
-		NamaZona:  namaZona,
-		Deskripsi: deskripsi,
-		Kapasitas: kapasitas,
+		IDZona:         zonaID,
+		NamaZona:       namaZona,
+		Deskripsi:      deskripsi,
+		Kapasitas:      kapasitas,
+		JenisKendaraan: jenisKendaraan,
 	}
-	return u.adminRepo.UpdateZone(zone)
+	err := u.adminRepo.UpdateZone(zone)
+	if err == nil && u.wsHub != nil {
+		u.wsHub.NotifyLayoutUpdate()
+	}
+	return err
 }
 
 func (u *adminUsecase) DeleteZone(zonaID uint) error {
 	if zonaID == 0 {
 		return errors.New("zona ID tidak valid")
 	}
-	return u.adminRepo.DeleteZone(zonaID)
+	err := u.adminRepo.DeleteZone(zonaID)
+	if err == nil && u.wsHub != nil {
+		u.wsHub.NotifyLayoutUpdate()
+	}
+	return err
 }
 
 // ─── Slot CRUD ──────────────────────────────────────────────────────────────

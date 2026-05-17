@@ -380,7 +380,9 @@ class _UserManagementPageState extends State<UserManagementPage> {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text(
-                            'Showing ${(_currentPage - 1) * _itemsPerPage + 1}-${(_currentPage * _itemsPerPage).clamp(1, _filtered.length)} of ${_users.length} users',
+                            _filtered.isEmpty
+                              ? 'Showing 0 of ${_users.length} users'
+                              : 'Showing ${(_currentPage - 1) * _itemsPerPage + 1}-${(_currentPage * _itemsPerPage).clamp(1, _filtered.length)} of ${_users.length} users',
                             style: const TextStyle(fontSize: 12, color: _kMuted),
                           ),
                           Row(

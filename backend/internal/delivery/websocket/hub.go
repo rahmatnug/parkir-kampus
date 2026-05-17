@@ -195,3 +195,9 @@ func (h *Hub) NotifyQueuePop(userID uint, data domain.QueuePopData) {
 func (h *Hub) NotifySystemAlert(data domain.SystemAlertData) {
 	h.BroadcastEvent(domain.EventSystemAlert, data)
 }
+
+// NotifyLayoutUpdate broadcasts a LAYOUT_UPDATE to all clients
+// so they can fetch the new zones/slots list.
+func (h *Hub) NotifyLayoutUpdate() {
+	h.BroadcastEvent(domain.EventLayoutUpdate, nil)
+}

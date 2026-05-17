@@ -3,6 +3,7 @@ package repository
 import (
 	"errors"
 	"fmt"
+	"log"
 	"time"
 
 	"github.com/rahmatnug/parkir-kampus-backend/internal/domain"
@@ -52,7 +53,13 @@ func (r *adminRepository) GetAllUsers() ([]domain.AdminUserItem, error) {
 		Scan(&users).Error
 
 	if err != nil {
+		log.Printf("[GetAllUsers] ERROR querying users: %v", err)
 		return nil, err
+	}
+
+	log.Printf("[GetAllUsers] Berhasil mengambil %d user dari database", len(users))
+	if len(users) > 0 {
+		log.Printf("[GetAllUsers] Contoh user pertama: ID=%d, Name=%s, Email=%s", users[0].ID, users[0].Name, users[0].Email)
 	}
 
 	return users, nil

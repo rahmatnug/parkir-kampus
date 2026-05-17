@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../config/app_config.dart';
+import '../../data/services/auth_service.dart';
 
 // Global navigator key agar interceptor bisa melakukan navigasi logout
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
@@ -9,6 +10,7 @@ final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 class ApiClient {
   late Dio dio;
   final FlutterSecureStorage _storage = const FlutterSecureStorage();
+  final AuthService _authService = AuthService();
 
   ApiClient() {
     dio = Dio(BaseOptions(
@@ -20,8 +22,8 @@ class ApiClient {
 
     dio.interceptors.add(InterceptorsWrapper(
       onRequest: (options, handler) async {
-        // 1. Sisipkan Token ke Header secara otomatis
-        final token = await _storage.read(key: 'auth_token');
+        // 1. Sisipkan Token ke Header secara otomatis (dari memory atau secure storage)
+        final token = await _authService.getToken();
         if (token != null) {
           options.headers['Authorization'] = 'Bearer $token';
         }

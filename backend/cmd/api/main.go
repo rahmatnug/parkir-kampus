@@ -5,6 +5,7 @@ import (
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
+	"github.com/joho/godotenv"
 
 	deliveryHTTP "github.com/rahmatnug/parkir-kampus-backend/internal/delivery/http"
 	deliveryWS "github.com/rahmatnug/parkir-kampus-backend/internal/delivery/websocket"
@@ -16,6 +17,11 @@ import (
 )
 
 func main() {
+	// Load .env file
+	if err := godotenv.Load(); err != nil {
+		log.Println("No .env file found or error loading it, relying on system environment variables")
+	}
+
 	// Initialize database
 	db := database.ConnectDB()
 	log.Println("Database initialized")
@@ -37,7 +43,7 @@ func main() {
 
 	// ─── Usecase layer ──────────────────────────────────────────────────
 	userUsecase := usecase.NewUserUsecase(userRepo)
-	adminUsecase := usecase.NewAdminUsecase(adminRepo)
+	adminUsecase := usecase.NewAdminUsecase(adminRepo, wsHub)
 	reportUsecase := usecase.NewReportUsecase(reportRepo)
 	parkingUsecase := usecase.NewParkingUsecase(parkingRepo, userRepo, wsHub)
 

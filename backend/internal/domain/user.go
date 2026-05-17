@@ -36,4 +36,5 @@ type UserUsecase interface {
 	Register(nama, nim, email, password, platNomor, jenisKendaraan string) (*User, error)
 	Login(email, password string) (string, *User, error)
 	ChangePassword(userID uint, currentPassword, newPassword string) error
+	GetProfile(userID uint) (*User, error)
 }

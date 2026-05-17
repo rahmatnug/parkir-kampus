@@ -95,8 +95,9 @@ class _UserEditProfilePageState extends State<UserEditProfilePage> {
               width: double.infinity,
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
               decoration: BoxDecoration(
-                color: const Color(0xFFE2E8F0).withValues(alpha: 0.5),
+                color: Colors.white,
                 borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: const Color(0xFFE2E8F0), width: 1.5),
               ),
               child: Text(
                 auth.nama ?? '-',
@@ -122,8 +123,9 @@ class _UserEditProfilePageState extends State<UserEditProfilePage> {
               width: double.infinity,
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
               decoration: BoxDecoration(
-                color: const Color(0xFFE2E8F0).withValues(alpha: 0.5),
+                color: Colors.white,
                 borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: const Color(0xFFE2E8F0), width: 1.5),
               ),
               child: Text(
                 auth.email ?? '-',
@@ -156,8 +158,9 @@ class _UserEditProfilePageState extends State<UserEditProfilePage> {
                         padding: const EdgeInsets.symmetric(
                             horizontal: 16, vertical: 16),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFE2E8F0).withValues(alpha: 0.5),
+                          color: Colors.white,
                           borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: const Color(0xFFE2E8F0), width: 1.5),
                         ),
                         child: Text(
                           auth.platNomor ?? '-',
@@ -189,8 +192,9 @@ class _UserEditProfilePageState extends State<UserEditProfilePage> {
                         padding: const EdgeInsets.symmetric(
                             horizontal: 16, vertical: 16),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFE2E8F0).withValues(alpha: 0.5),
+                          color: Colors.white,
                           borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: const Color(0xFFE2E8F0), width: 1.5),
                         ),
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,

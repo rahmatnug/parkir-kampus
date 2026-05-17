@@ -1,20 +1,28 @@
 import 'dart:convert';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 
 import '../../core/config/app_config.dart';
+import 'auth_service.dart';
 
 class AdminService {
   String get _baseUrl => '${AppConfig.baseUrl}/api';
-  static const _storage = FlutterSecureStorage();
+  final AuthService _authService = AuthService();
 
   /// Retrieve stored JWT token for authenticated requests.
-  Future<String?> _getToken() => _storage.read(key: 'auth_token');
+  /// Uses AuthService to cover both in-memory and secure storage tokens.
+  Future<String?> _getToken() => _authService.getToken();
 
   // ─── GET: Dashboard stats ─────────────────────────────────────────────────
   Future<Map<String, dynamic>> getDashboardStats() async {
     try {
-      final response = await http.get(Uri.parse('$_baseUrl/admin/dashboard'));
+      final token = await _getToken();
+      final response = await http.get(
+        Uri.parse('$_baseUrl/admin/dashboard'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
       if (response.statusCode == 200) return jsonDecode(response.body);
       throw Exception('Failed to load dashboard stats');
     } catch (e) {
@@ -25,7 +33,14 @@ class AdminService {
   // ─── GET: Users list ──────────────────────────────────────────────────────
   Future<List<dynamic>> getUsers() async {
     try {
-      final response = await http.get(Uri.parse('$_baseUrl/admin/users'));
+      final token = await _getToken();
+      final response = await http.get(
+        Uri.parse('$_baseUrl/admin/users'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         return data['users'] ?? [];
@@ -39,7 +54,14 @@ class AdminService {
   // ─── GET: Activity logs ───────────────────────────────────────────────────
   Future<List<dynamic>> getActivities() async {
     try {
-      final response = await http.get(Uri.parse('$_baseUrl/admin/activities'));
+      final token = await _getToken();
+      final response = await http.get(
+        Uri.parse('$_baseUrl/admin/activities'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         return data['activities'] ?? [];
@@ -88,7 +110,14 @@ class AdminService {
   // ─── GET: Blacklisted users (poin > 50) ───────────────────────────────────
   Future<List<dynamic>> getBlacklist() async {
     try {
-      final response = await http.get(Uri.parse('$_baseUrl/admin/blacklist'));
+      final token = await _getToken();
+      final response = await http.get(
+        Uri.parse('$_baseUrl/admin/blacklist'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         return data['blacklist'] ?? [];

@@ -12,7 +12,8 @@ class QRScanPage extends StatefulWidget {
   State<QRScanPage> createState() => _QRScanPageState();
 }
 
-class _QRScanPageState extends State<QRScanPage> with SingleTickerProviderStateMixin {
+class _QRScanPageState extends State<QRScanPage>
+    with SingleTickerProviderStateMixin {
   late MobileScannerController cameraController;
   late AnimationController _animationController;
   bool isScanning = true;
@@ -29,7 +30,7 @@ class _QRScanPageState extends State<QRScanPage> with SingleTickerProviderStateM
 
     _animationController = AnimationController(
       vsync: this,
-      duration: const Duration(seconds: 2),
+      duration: const Duration(seconds: 3),
     )..repeat(reverse: true);
 
     // Reset scan state when entering this page
@@ -61,18 +62,12 @@ class _QRScanPageState extends State<QRScanPage> with SingleTickerProviderStateM
             isScanning = false;
             _isProcessing = true;
           });
-
           _processScan(code);
         } else {
           setState(() => isScanning = false);
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Format QR tidak dikenali!'),
-              backgroundColor: Colors.red,
-            ),
-          );
-
-          Future.delayed(const Duration(seconds: 2), () {
+          _showErrorSheet('Format QR tidak dikenali!',
+              'Pastikan Anda memindai kode QR yang terdapat pada tiang zona parkir.');
+          Future.delayed(const Duration(seconds: 3), () {
             if (mounted) setState(() => isScanning = true);
           });
         }
@@ -84,68 +79,52 @@ class _QRScanPageState extends State<QRScanPage> with SingleTickerProviderStateM
   Future<void> _processScan(String qrCode) async {
     final provider = context.read<ParkingProvider>();
 
-    // Show loading indicator
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Row(
-          children: [
-            SizedBox(
-              width: 20,
-              height: 20,
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
-                color: Colors.white,
-              ),
-            ),
-            SizedBox(width: 12),
-            Text('Memproses QR Code...'),
-          ],
-        ),
-        backgroundColor: Color(0xFF1E70EB),
-        duration: Duration(seconds: 10),
-      ),
-    );
+    // Show processing modal bottom sheet
+    _showProcessingSheet();
 
     await provider.scanQR(qrCode);
 
     if (!mounted) return;
-    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+
+    // Close processing sheet
+    Navigator.of(context).pop();
 
     final status = provider.scanStatus;
 
     if (status == ScanStatus.success) {
-      // Navigate to Parking Assigned page
+      // Navigate to Parking Assigned page with real coordinates
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
           builder: (_) => ParkingAssignedPage(
             slotNumber: provider.assignedSlot ?? '-',
             zone: provider.assignedZone ?? '-',
+            xCoord: provider.assignedX ?? 0.0,
+            yCoord: provider.assignedY ?? 0.0,
+            vehicleType: provider.jenisKendaraan ?? 'Motor',
           ),
         ),
       );
     } else if (status == ScanStatus.zoneFull) {
-      // Navigate to Parking Full page
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
-          builder: (_) => const ParkingFullPage(
-            availableZones: ['B', 'C'],
-            vehicleType: 'Motor',
+          builder: (_) => ParkingFullPage(
+            availableZones: const ['B', 'C'],
+            vehicleType: provider.jenisKendaraan ?? 'Motor',
           ),
         ),
       );
     } else {
-      // Show error and allow re-scan
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(provider.scanErrorMessage ?? 'Terjadi kesalahan'),
-          backgroundColor: Colors.red,
-          duration: const Duration(seconds: 3),
-        ),
+      // Show error bottom sheet
+      _showErrorSheet(
+        provider.scanErrorCode == 'NO_VEHICLE'
+            ? 'Profil Kendaraan Kosong'
+            : 'Gagal Memproses QR',
+        provider.scanErrorMessage ?? 'Terjadi kesalahan, silakan coba lagi.',
       );
 
-      Future.delayed(const Duration(seconds: 2), () {
+      Future.delayed(const Duration(seconds: 3), () {
         if (mounted) {
           setState(() {
             isScanning = true;
@@ -156,10 +135,177 @@ class _QRScanPageState extends State<QRScanPage> with SingleTickerProviderStateM
     }
   }
 
+  void _showProcessingSheet() {
+    showModalBottomSheet(
+      context: context,
+      isDismissible: false,
+      enableDrag: false,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 24),
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.only(
+            topLeft: Radius.circular(28),
+            topRight: Radius.circular(28),
+          ),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Drag handle
+            Container(
+              width: 48,
+              height: 5,
+              margin: const EdgeInsets.only(bottom: 32),
+              decoration: BoxDecoration(
+                color: const Color(0xFFE2E8F0),
+                borderRadius: BorderRadius.circular(4),
+              ),
+            ),
+            // Spinner
+            const SizedBox(
+              width: 56,
+              height: 56,
+              child: CircularProgressIndicator(
+                strokeWidth: 4,
+                color: Color(0xFF1E70EB),
+              ),
+            ),
+            const SizedBox(height: 28),
+            const Text(
+              'Memproses Scan...',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF0F172A),
+              ),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Mohon tunggu sebentar,\nkami sedang memverifikasi data parkir Anda.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 14,
+                color: Color(0xFF64748B),
+                height: 1.5,
+              ),
+            ),
+            const SizedBox(height: 32),
+            // Skeleton shimmer bars
+            _buildShimmerBar(),
+            const SizedBox(height: 12),
+            _buildShimmerBar(),
+            const SizedBox(height: 12),
+            _buildShimmerBar(),
+            const SizedBox(height: 16),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildShimmerBar() {
+    return Container(
+      width: double.infinity,
+      height: 48,
+      decoration: BoxDecoration(
+        color: const Color(0xFFF1F5F9),
+        borderRadius: BorderRadius.circular(12),
+      ),
+    );
+  }
+
+  void _showErrorSheet(String title, String message) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 24),
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.only(
+            topLeft: Radius.circular(28),
+            topRight: Radius.circular(28),
+          ),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 48,
+              height: 5,
+              margin: const EdgeInsets.only(bottom: 24),
+              decoration: BoxDecoration(
+                color: const Color(0xFFE2E8F0),
+                borderRadius: BorderRadius.circular(4),
+              ),
+            ),
+            Container(
+              width: 64,
+              height: 64,
+              decoration: BoxDecoration(
+                color: const Color(0xFFFEE2E2),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.warning_amber_rounded,
+                  color: Color(0xFFEF4444), size: 36),
+            ),
+            const SizedBox(height: 20),
+            Text(
+              title,
+              style: const TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF0F172A),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontSize: 14,
+                color: Color(0xFF64748B),
+                height: 1.5,
+              ),
+            ),
+            const SizedBox(height: 24),
+            SizedBox(
+              width: double.infinity,
+              height: 50,
+              child: ElevatedButton(
+                onPressed: () {
+                  Navigator.pop(ctx);
+                  setState(() {
+                    isScanning = true;
+                    _isProcessing = false;
+                  });
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF1E70EB),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                  elevation: 0,
+                ),
+                child: const Text('Coba Lagi',
+                    style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white)),
+              ),
+            ),
+            const SizedBox(height: 12),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0F172A), // Dark mode base
+      backgroundColor: const Color(0xFF0A0F1E),
       extendBodyBehindAppBar: true,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
@@ -172,7 +318,7 @@ class _QRScanPageState extends State<QRScanPage> with SingleTickerProviderStateM
           'Scan QR Parkiran',
           style: TextStyle(
             color: Colors.white,
-            fontFamily: 'Montserrat',
+            fontSize: 18,
             fontWeight: FontWeight.bold,
           ),
         ),
@@ -186,40 +332,30 @@ class _QRScanPageState extends State<QRScanPage> with SingleTickerProviderStateM
             onDetect: _onDetect,
           ),
 
-          // Scanner Overlay
+          // Scanner Overlay with animated laser
           CustomPaint(
             size: Size.infinite,
-            painter: ScannerOverlayPainter(
+            painter: _ScannerOverlayPainter(
               animationValue: _animationController,
             ),
           ),
 
-          // Loading overlay when processing
-          if (_isProcessing)
-            Container(
-              color: Colors.black54,
-              child: const Center(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    CircularProgressIndicator(
-                      color: Color(0xFF1E70EB),
-                      strokeWidth: 3,
-                    ),
-                    SizedBox(height: 16),
-                    Text(
-                      'Memproses...',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontFamily: 'Montserrat',
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                ),
+          // Instruction text below viewfinder
+          Positioned(
+            bottom: 180,
+            left: 0,
+            right: 0,
+            child: Text(
+              'Scan barcode yang ada\ndi zona parkir',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: Colors.white.withOpacity(0.85),
+                fontSize: 16,
+                fontWeight: FontWeight.w500,
+                height: 1.4,
               ),
             ),
+          ),
 
           // Bottom Controls
           Positioned(
@@ -230,53 +366,37 @@ class _QRScanPageState extends State<QRScanPage> with SingleTickerProviderStateM
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 // Flash Toggle
-                Container(
-                  width: 50,
-                  height: 50,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.1),
-                    shape: BoxShape.circle,
+                _buildControlButton(
+                  size: 56,
+                  child: ValueListenableBuilder<MobileScannerState>(
+                    valueListenable: cameraController,
+                    builder: (context, state, child) {
+                      final isOn = state.torchState == TorchState.on;
+                      return Icon(
+                        isOn
+                            ? Icons.flashlight_on_rounded
+                            : Icons.flashlight_off_rounded,
+                        color: isOn ? Colors.amber : Colors.white70,
+                        size: 24,
+                      );
+                    },
                   ),
-                    child: IconButton(
-                      icon: ValueListenableBuilder<MobileScannerState>(
-                        valueListenable: cameraController,
-                        builder: (context, state, child) {
-                          final torchState = state.torchState;
-                          return Icon(
-                            torchState == TorchState.on ? Icons.flashlight_on : Icons.flashlight_off,
-                            color: torchState == TorchState.on ? Colors.yellow : Colors.white,
-                          );
-                        },
-                      ),
-                      onPressed: () => cameraController.toggleTorch(),
-                    ),
+                  onTap: () => cameraController.toggleTorch(),
+                  isAccent: false,
                 ),
 
-                const SizedBox(width: 32),
+                const SizedBox(width: 24),
 
-                // Camera Switch / Capture
-                Container(
-                  width: 80,
-                  height: 80,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: const Color(0xFF1E70EB),
-                    boxShadow: [
-                      BoxShadow(
-                        color: const Color(0xFF1E70EB).withOpacity(0.4),
-                        blurRadius: 20,
-                        spreadRadius: 8,
-                      ),
-                    ],
+                // Switch Camera (primary action)
+                _buildControlButton(
+                  size: 72,
+                  child: const Icon(
+                    Icons.cameraswitch_rounded,
+                    color: Colors.white,
+                    size: 32,
                   ),
-                  child: IconButton(
-                    icon: const Icon(
-                      Icons.cameraswitch,
-                      color: Colors.black,
-                      size: 32,
-                    ),
-                    onPressed: () => cameraController.switchCamera(),
-                  ),
+                  onTap: () => cameraController.switchCamera(),
+                  isAccent: true,
                 ),
               ],
             ),
@@ -285,106 +405,168 @@ class _QRScanPageState extends State<QRScanPage> with SingleTickerProviderStateM
       ),
     );
   }
+
+  Widget _buildControlButton({
+    required double size,
+    required Widget child,
+    required VoidCallback onTap,
+    required bool isAccent,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: size,
+        height: size,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: isAccent
+              ? const Color(0xFF1E70EB)
+              : Colors.white.withOpacity(0.12),
+          border: Border.all(
+            color: isAccent
+                ? const Color(0xFF1E70EB)
+                : Colors.white.withOpacity(0.2),
+            width: 2,
+          ),
+          boxShadow: isAccent
+              ? [
+                  BoxShadow(
+                    color: const Color(0xFF1E70EB).withOpacity(0.45),
+                    blurRadius: 24,
+                    spreadRadius: 6,
+                  ),
+                ]
+              : [],
+        ),
+        child: Center(child: child),
+      ),
+    );
+  }
 }
 
-class ScannerOverlayPainter extends CustomPainter {
+// ──────────────────────────────────────────────────────────────
+// Custom Painter: Scanner Overlay with animated laser beam
+// ──────────────────────────────────────────────────────────────
+class _ScannerOverlayPainter extends CustomPainter {
   final Animation<double> animationValue;
 
-  ScannerOverlayPainter({required this.animationValue}) : super(repaint: animationValue);
+  _ScannerOverlayPainter({required this.animationValue})
+      : super(repaint: animationValue);
 
   @override
   void paint(Canvas canvas, Size size) {
     final width = size.width;
     final height = size.height;
-    
-    // Size and position of the scanning window
-    final scanRectSize = width * 0.7;
-    final scanRectLeft = (width - scanRectSize) / 2;
-    final scanRectTop = (height - scanRectSize) / 2 - 50; 
-    final scanRect = Rect.fromLTWH(scanRectLeft, scanRectTop, scanRectSize, scanRectSize);
 
-    // 1. Draw the semi-transparent mask
-    final maskPaint = Paint()..color = const Color(0xFF0F172A).withOpacity(0.8);
+    // Size and position of the scanning window
+    final scanRectSize = width * 0.68;
+    final scanRectLeft = (width - scanRectSize) / 2;
+    final scanRectTop = (height - scanRectSize) / 2 - 60;
+    final scanRect =
+        Rect.fromLTWH(scanRectLeft, scanRectTop, scanRectSize, scanRectSize);
+    final cornerRadius = 20.0;
+
+    // 1. Draw the dark overlay mask
+    final maskPaint = Paint()..color = const Color(0xFF0A0F1E).withOpacity(0.82);
     final path = Path()
       ..addRect(Rect.fromLTWH(0, 0, width, height))
-      ..addRRect(RRect.fromRectAndRadius(scanRect, const Radius.circular(24)))
+      ..addRRect(RRect.fromRectAndRadius(scanRect, Radius.circular(cornerRadius)))
       ..fillType = PathFillType.evenOdd;
-    
+
     canvas.drawPath(path, maskPaint);
 
-    // 2. Draw the L-shape corners
+    // 2. Draw rounded corner brackets (L-shaped)
     final cornerPaint = Paint()
       ..color = const Color(0xFF1E70EB)
-      ..strokeWidth = 4
+      ..strokeWidth = 4.0
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round;
 
-    const cornerLength = 40.0;
+    const cornerLen = 36.0;
+    final r = cornerRadius;
 
-    // Top-Left
-    canvas.drawPath(
-      Path()
-        ..moveTo(scanRect.left, scanRect.top + cornerLength)
-        ..quadraticBezierTo(scanRect.left, scanRect.top, scanRect.left, scanRect.top)
-        ..lineTo(scanRect.left + cornerLength, scanRect.top),
-      cornerPaint,
-    );
+    // Top-Left corner
+    final tlPath = Path()
+      ..moveTo(scanRect.left, scanRect.top + cornerLen)
+      ..lineTo(scanRect.left, scanRect.top + r)
+      ..quadraticBezierTo(
+          scanRect.left, scanRect.top, scanRect.left + r, scanRect.top)
+      ..lineTo(scanRect.left + cornerLen, scanRect.top);
+    canvas.drawPath(tlPath, cornerPaint);
 
-    // Top-Right
-    canvas.drawPath(
-      Path()
-        ..moveTo(scanRect.right - cornerLength, scanRect.top)
-        ..quadraticBezierTo(scanRect.right, scanRect.top, scanRect.right, scanRect.top)
-        ..lineTo(scanRect.right, scanRect.top + cornerLength),
-      cornerPaint,
-    );
+    // Top-Right corner
+    final trPath = Path()
+      ..moveTo(scanRect.right - cornerLen, scanRect.top)
+      ..lineTo(scanRect.right - r, scanRect.top)
+      ..quadraticBezierTo(
+          scanRect.right, scanRect.top, scanRect.right, scanRect.top + r)
+      ..lineTo(scanRect.right, scanRect.top + cornerLen);
+    canvas.drawPath(trPath, cornerPaint);
 
-    // Bottom-Left
-    canvas.drawPath(
-      Path()
-        ..moveTo(scanRect.left, scanRect.bottom - cornerLength)
-        ..quadraticBezierTo(scanRect.left, scanRect.bottom, scanRect.left, scanRect.bottom)
-        ..lineTo(scanRect.left + cornerLength, scanRect.bottom),
-      cornerPaint,
-    );
+    // Bottom-Left corner
+    final blPath = Path()
+      ..moveTo(scanRect.left, scanRect.bottom - cornerLen)
+      ..lineTo(scanRect.left, scanRect.bottom - r)
+      ..quadraticBezierTo(
+          scanRect.left, scanRect.bottom, scanRect.left + r, scanRect.bottom)
+      ..lineTo(scanRect.left + cornerLen, scanRect.bottom);
+    canvas.drawPath(blPath, cornerPaint);
 
-    // Bottom-Right
-    canvas.drawPath(
-      Path()
-        ..moveTo(scanRect.right - cornerLength, scanRect.bottom)
-        ..quadraticBezierTo(scanRect.right, scanRect.bottom, scanRect.right, scanRect.bottom)
-        ..lineTo(scanRect.right, scanRect.bottom - cornerLength),
-      cornerPaint,
-    );
+    // Bottom-Right corner
+    final brPath = Path()
+      ..moveTo(scanRect.right - cornerLen, scanRect.bottom)
+      ..lineTo(scanRect.right - r, scanRect.bottom)
+      ..quadraticBezierTo(
+          scanRect.right, scanRect.bottom, scanRect.right, scanRect.bottom - r)
+      ..lineTo(scanRect.right, scanRect.bottom - cornerLen);
+    canvas.drawPath(brPath, cornerPaint);
 
-    // 3. Draw Laser Beam
-    final laserY = scanRect.top + (scanRect.height * animationValue.value);
-    
-    final glowPaint = Paint()
-      ..color = const Color(0xFF1E70EB).withOpacity(0.5)
-      ..strokeWidth = 8
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4);
-      
-    final laserPaint = Paint()
-      ..color = const Color(0xFF1E70EB)
-      ..strokeWidth = 2;
+    // 3. Draw animated laser beam
+    final laserY =
+        scanRect.top + 16 + ((scanRect.height - 32) * animationValue.value);
 
     if (laserY >= scanRect.top && laserY <= scanRect.bottom) {
-      canvas.drawLine(
-        Offset(scanRect.left + 8, laserY),
-        Offset(scanRect.right - 8, laserY),
+      // Glow effect
+      final glowPaint = Paint()
+        ..shader = LinearGradient(
+          colors: [
+            const Color(0xFF1E70EB).withOpacity(0.0),
+            const Color(0xFF1E70EB).withOpacity(0.6),
+            const Color(0xFF60A5FA).withOpacity(0.8),
+            const Color(0xFF1E70EB).withOpacity(0.6),
+            const Color(0xFF1E70EB).withOpacity(0.0),
+          ],
+        ).createShader(
+            Rect.fromLTWH(scanRect.left, laserY - 16, scanRect.width, 32));
+
+      canvas.drawRect(
+        Rect.fromLTWH(
+            scanRect.left + 12, laserY - 16, scanRect.width - 24, 32),
         glowPaint,
       );
+
+      // Crisp laser line
+      final laserPaint = Paint()
+        ..shader = LinearGradient(
+          colors: [
+            const Color(0xFF1E70EB).withOpacity(0.0),
+            const Color(0xFF60A5FA),
+            const Color(0xFF93C5FD),
+            const Color(0xFF60A5FA),
+            const Color(0xFF1E70EB).withOpacity(0.0),
+          ],
+        ).createShader(
+            Rect.fromLTWH(scanRect.left, laserY - 1, scanRect.width, 2));
+
+      laserPaint.strokeWidth = 2;
       canvas.drawLine(
-        Offset(scanRect.left + 8, laserY),
-        Offset(scanRect.right - 8, laserY),
+        Offset(scanRect.left + 12, laserY),
+        Offset(scanRect.right - 12, laserY),
         laserPaint,
       );
     }
   }
 
   @override
-  bool shouldRepaint(covariant ScannerOverlayPainter oldDelegate) {
-    return true;
-  }
+  bool shouldRepaint(covariant _ScannerOverlayPainter oldDelegate) => true;
 }

@@ -190,16 +190,17 @@ func (h *AdminHandler) RemovePenalty(c *gin.Context) {
 // CreateZone handles POST /api/admin/zones
 func (h *AdminHandler) CreateZone(c *gin.Context) {
 	var input struct {
-		NamaZona  string `json:"nama_zona" binding:"required"`
-		Deskripsi string `json:"deskripsi"`
-		Kapasitas int    `json:"kapasitas" binding:"required,gt=0"`
+		NamaZona       string `json:"nama_zona" binding:"required"`
+		Deskripsi      string `json:"deskripsi"`
+		Kapasitas      int    `json:"kapasitas" binding:"required,gt=0"`
+		JenisKendaraan string `json:"jenis_kendaraan" binding:"required,oneof=motor mobil"`
 	}
 	if err := c.ShouldBindJSON(&input); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"status": "error", "message": err.Error()})
 		return
 	}
 
-	if err := h.AdminUsecase.CreateZone(input.NamaZona, input.Deskripsi, input.Kapasitas); err != nil {
+	if err := h.AdminUsecase.CreateZone(input.NamaZona, input.Deskripsi, input.Kapasitas, input.JenisKendaraan); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"status": "error", "message": err.Error()})
 		return
 	}
@@ -227,16 +228,17 @@ func (h *AdminHandler) UpdateZone(c *gin.Context) {
 	}
 
 	var input struct {
-		NamaZona  string `json:"nama_zona" binding:"required"`
-		Deskripsi string `json:"deskripsi"`
-		Kapasitas int    `json:"kapasitas" binding:"required,gt=0"`
+		NamaZona       string `json:"nama_zona" binding:"required"`
+		Deskripsi      string `json:"deskripsi"`
+		Kapasitas      int    `json:"kapasitas" binding:"required,gt=0"`
+		JenisKendaraan string `json:"jenis_kendaraan" binding:"required,oneof=motor mobil"`
 	}
 	if err := c.ShouldBindJSON(&input); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"status": "error", "message": err.Error()})
 		return
 	}
 
-	if err := h.AdminUsecase.UpdateZone(uint(id), input.NamaZona, input.Deskripsi, input.Kapasitas); err != nil {
+	if err := h.AdminUsecase.UpdateZone(uint(id), input.NamaZona, input.Deskripsi, input.Kapasitas, input.JenisKendaraan); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"status": "error", "message": err.Error()})
 		return
 	}

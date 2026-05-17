@@ -24,8 +24,25 @@ func NewUserHandler(r *gin.Engine, us domain.UserUsecase) {
 	protected := r.Group("/api/user")
 	protected.Use(AuthMiddleware())
 	{
+		protected.GET("/profile", handler.GetProfile)
 		protected.PUT("/change-password", handler.ChangePassword)
 	}
+}
+
+// GetProfile handler
+func (a *UserHandler) GetProfile(c *gin.Context) {
+	userID := c.MustGet("id_user").(uint)
+
+	user, err := a.UserUsecase.GetProfile(userID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"status": "error", "message": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"status": "success",
+		"user":   user,
+	})
 }
 
 // Register handler

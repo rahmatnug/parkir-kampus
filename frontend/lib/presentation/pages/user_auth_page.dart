@@ -22,6 +22,10 @@ class _UserAuthPageState extends State<UserAuthPage>
   bool _rememberDevice = false;
   bool _isLoading = false;
 
+  final _loginFormKey = GlobalKey<FormState>();
+
+  final _registerFormKey = GlobalKey<FormState>();
+
   // Register fields
   final _regNamaCtrl = TextEditingController();
   final _regNimCtrl = TextEditingController();
@@ -54,8 +58,7 @@ class _UserAuthPageState extends State<UserAuthPage>
   }
 
   Future<void> _handleLogin() async {
-    if (_loginEmailCtrl.text.isEmpty || _loginPassCtrl.text.isEmpty) {
-      _showSnack('Email/NIM dan password wajib diisi');
+    if (!_loginFormKey.currentState!.validate()) {
       return;
     }
     setState(() => _isLoading = true);
@@ -63,6 +66,7 @@ class _UserAuthPageState extends State<UserAuthPage>
       bool success = await context.read<AuthProvider>().login(
             _loginEmailCtrl.text.trim(),
             _loginPassCtrl.text,
+            _rememberDevice,
           );
       if (success) {
         if (!mounted) return;
@@ -83,12 +87,11 @@ class _UserAuthPageState extends State<UserAuthPage>
   }
 
   Future<void> _handleRegister() async {
-    if (_regNamaCtrl.text.isEmpty || _regNimCtrl.text.isEmpty || _regEmailCtrl.text.isEmpty || _regPassCtrl.text.isEmpty || _regConfirmPassCtrl.text.isEmpty) {
-      _showSnack('Semua kolom wajib diisi');
+    if (!_registerFormKey.currentState!.validate()) {
       return;
     }
-    if (_regPassCtrl.text != _regConfirmPassCtrl.text) {
-      _showSnack('Konfirmasi password tidak cocok');
+    if (_jenisKendaraan.isEmpty) {
+      _showSnack('Pilih jenis kendaraan terlebih dahulu');
       return;
     }
     setState(() => _isLoading = true);
@@ -281,16 +284,25 @@ class _UserAuthPageState extends State<UserAuthPage>
 
   // ─── LOGIN FORM ────────────────────────────────────────────────────────────
   Widget _buildLoginForm() {
-    return Column(
-      key: const ValueKey('login'),
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
+    return Form(
+      key: _loginFormKey,
+      child: Column(
+        key: const ValueKey('login'),
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
         _FieldLabel(label: 'EMAIL OR NIM/ID'),
         const SizedBox(height: 8),
         _AuthField(
           controller: _loginEmailCtrl,
-          hint: 'e.g. 21004567 or email@univ.ac.id',
+          hint: 'e.g. 25051204306 or 25051204306@mhs.unesa.ac.id',
           prefixIcon: Icons.person_outline_rounded,
+          validator: (v) {
+            if (v == null || v.isEmpty) return 'Email/NIM wajib diisi';
+            bool isNim = RegExp(r'^[0-9]+$').hasMatch(v);
+            bool isEmail = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(v);
+            if (!isNim && !isEmail) return 'Masukkan NIM atau Email yang valid';
+            return null;
+          },
         ),
         const SizedBox(height: 16),
 
@@ -317,6 +329,7 @@ class _UserAuthPageState extends State<UserAuthPage>
           isVisible: _loginPassVisible,
           onToggleVisibility: () =>
               setState(() => _loginPassVisible = !_loginPassVisible),
+          validator: (v) => v == null || v.isEmpty ? 'Password wajib diisi' : null,
         ),
         const SizedBox(height: 14),
 
@@ -400,21 +413,25 @@ class _UserAuthPageState extends State<UserAuthPage>
           ),
         ),
       ],
-    );
+    ),
+  );
   }
 
   // ─── REGISTER FORM ─────────────────────────────────────────────────────────
   Widget _buildRegisterForm() {
-    return Column(
-      key: const ValueKey('register'),
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
+    return Form(
+      key: _registerFormKey,
+      child: Column(
+        key: const ValueKey('register'),
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
         const _FieldLabel(label: 'NAMA LENGKAP'),
         const SizedBox(height: 8),
         _AuthField(
           controller: _regNamaCtrl,
           hint: 'e.g. Budi Santoso',
           prefixIcon: Icons.badge_outlined,
+          validator: (v) => v == null || v.isEmpty ? 'Nama lengkap wajib diisi' : null,
         ),
         const SizedBox(height: 16),
 
@@ -424,6 +441,12 @@ class _UserAuthPageState extends State<UserAuthPage>
           controller: _regNimCtrl,
           hint: 'e.g. 21004567',
           prefixIcon: Icons.assignment_ind_outlined,
+          validator: (v) {
+            if (v == null || v.isEmpty) return 'NIM wajib diisi';
+            if (!RegExp(r'^[0-9]+$').hasMatch(v)) return 'NIM hanya boleh berisi angka';
+            if (v.length < 5) return 'NIM terlalu pendek';
+            return null;
+          },
         ),
         const SizedBox(height: 16),
 
@@ -431,9 +454,14 @@ class _UserAuthPageState extends State<UserAuthPage>
         const SizedBox(height: 8),
         _AuthField(
           controller: _regEmailCtrl,
-          hint: 'e.g. 21004567 or email@univ.ac.id',
+          hint: 'e.g. 25051204306@mhs.unesa.ac.id',
           prefixIcon: Icons.person_outline_rounded,
           keyboardType: TextInputType.emailAddress,
+          validator: (v) {
+            if (v == null || v.isEmpty) return 'Email wajib diisi';
+            if (!RegExp(r'^[0-9]+@mhs\.unesa\.ac\.id$').hasMatch(v)) return 'Gunakan format email resmi: [NIM]@mhs.unesa.ac.id';
+            return null;
+          },
         ),
         const SizedBox(height: 16),
 
@@ -447,6 +475,11 @@ class _UserAuthPageState extends State<UserAuthPage>
           isVisible: _regPassVisible,
           onToggleVisibility: () =>
               setState(() => _regPassVisible = !_regPassVisible),
+          validator: (v) {
+            if (v == null || v.isEmpty) return 'Password wajib diisi';
+            if (v.length < 8) return 'Password minimal 8 karakter';
+            return null;
+          },
         ),
         const SizedBox(height: 16),
 
@@ -460,6 +493,10 @@ class _UserAuthPageState extends State<UserAuthPage>
           isVisible: _regConfirmVisible,
           onToggleVisibility: () =>
               setState(() => _regConfirmVisible = !_regConfirmVisible),
+          validator: (v) {
+            if (v != _regPassCtrl.text) return 'Konfirmasi password tidak cocok';
+            return null;
+          },
         ),
         const SizedBox(height: 16),
 
@@ -467,15 +504,17 @@ class _UserAuthPageState extends State<UserAuthPage>
         const SizedBox(height: 8),
 
         Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Expanded(
-              child: TextField(
+              child: TextFormField(
                 controller: _platCtrl,
                 textCapitalization: TextCapitalization.characters,
                 style: const TextStyle(
                     fontSize: 13,
-                    color: Color.fromARGB(255, 255, 255, 255),
+                    color: Color(0xFF0F172A),
                     fontWeight: FontWeight.w500),
+                validator: (v) => v == null || v.isEmpty ? 'Isi plat nomor' : null,
                 decoration: InputDecoration(
                   hintText: 'PLAT NOMOR',
                   hintStyle: const TextStyle(
@@ -484,6 +523,7 @@ class _UserAuthPageState extends State<UserAuthPage>
                       horizontal: 14, vertical: 14),
                   filled: true,
                   fillColor: Colors.white,
+                  errorStyle: const TextStyle(color: Colors.red),
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(10),
                     borderSide: const BorderSide(
@@ -493,6 +533,16 @@ class _UserAuthPageState extends State<UserAuthPage>
                     borderRadius: BorderRadius.circular(10),
                     borderSide: const BorderSide(
                         color: Color(0xFF2563EB), width: 1.5),
+                  ),
+                  errorBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: const BorderSide(
+                        color: Colors.red, width: 1.5),
+                  ),
+                  focusedErrorBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: const BorderSide(
+                        color: Colors.red, width: 1.5),
                   ),
                 ),
               ),
@@ -517,6 +567,7 @@ class _UserAuthPageState extends State<UserAuthPage>
                     icon: const Icon(Icons.keyboard_arrow_down_rounded,
                         color: Color(0xFF94A3B8)),
                     isDense: true,
+                    dropdownColor: Colors.white,
                     style: const TextStyle(
                         fontSize: 13, color: Color(0xFF0F172A)),
                     onChanged: (v) =>
@@ -580,8 +631,9 @@ class _UserAuthPageState extends State<UserAuthPage>
           ),
         ),
       ],
-    );
-  }
+    ),
+  );
+}
 }
 
 // ─── Auth Field ────────────────────────────────────────────────────────────────
@@ -593,6 +645,7 @@ class _AuthField extends StatelessWidget {
   final bool isVisible;
   final VoidCallback? onToggleVisibility;
   final TextInputType? keyboardType;
+  final String? Function(String?)? validator;
 
   const _AuthField({
     required this.controller,
@@ -602,14 +655,16 @@ class _AuthField extends StatelessWidget {
     this.isVisible = false,
     this.onToggleVisibility,
     this.keyboardType,
+    this.validator,
   });
 
   @override
   Widget build(BuildContext context) {
-    return TextField(
+    return TextFormField(
       controller: controller,
       obscureText: isPassword && !isVisible,
       keyboardType: keyboardType,
+      validator: validator,
       style: const TextStyle(
           fontSize: 14, color: Color(0xFF0F172A), fontWeight: FontWeight.w500),
       decoration: InputDecoration(
@@ -634,6 +689,7 @@ class _AuthField extends StatelessWidget {
             const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         filled: true,
         fillColor: Colors.white,
+        errorStyle: const TextStyle(color: Colors.red),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(10),
           borderSide:
@@ -643,6 +699,16 @@ class _AuthField extends StatelessWidget {
           borderRadius: BorderRadius.circular(10),
           borderSide:
               const BorderSide(color: Color(0xFF2563EB), width: 1.5),
+        ),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide:
+              const BorderSide(color: Colors.red, width: 1.5),
+        ),
+        focusedErrorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide:
+              const BorderSide(color: Colors.red, width: 1.5),
         ),
       ),
     );

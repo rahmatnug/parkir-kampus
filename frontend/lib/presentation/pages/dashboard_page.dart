@@ -64,103 +64,136 @@ class _Sidebar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 148,
-      decoration: const BoxDecoration(
-        color: kSidebar,
-        border: Border(right: BorderSide(color: kBorder)),
-      ),
-      child: Column(
-        children: [
-          // Logo
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
-            child: Row(
-              children: [
-                Container(
-                  width: 32, height: 32,
-                  decoration: BoxDecoration(
-                    color: kBlue,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: const Center(
-                    child: Text('P',
-                        style: TextStyle(color: Colors.white,
-                            fontSize: 18, fontWeight: FontWeight.bold)),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                const Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('ParkirKampus',
-                          style: TextStyle(fontSize: 11,
-                              fontWeight: FontWeight.bold, color: kText),
-                          overflow: TextOverflow.ellipsis),
-                      Text('ADMIN MANAGEMENT',
-                          style: TextStyle(fontSize: 8, color: kMuted,
-                              letterSpacing: 0.5)),
-                    ],
-                  ),
-                ),
-              ],
-            ),
+      width: 170,
+      margin: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.8),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.white, width: 2),
+        boxShadow: [
+          BoxShadow(
+            color: kBlue.withValues(alpha: 0.08),
+            blurRadius: 24,
+            offset: const Offset(0, 8),
           ),
-          const Divider(height: 1, color: kBorder),
-          const SizedBox(height: 8),
-          // Nav items
-          for (int i = 0; i < _items.length; i++)
-            _SidebarItem(
-              item: _items[i],
-              selected: selectedIndex == i,
-              onTap: () => onTap(i),
-            ),
-          const Spacer(),
-          const Divider(height: 1, color: kBorder),
-          // User info at bottom
-          Consumer<AuthProvider>(
-            builder: (_, auth, __) => Padding(
-              padding: const EdgeInsets.all(12),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(20),
+        child: Column(
+          children: [
+            // Logo
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
               child: Row(
                 children: [
-                  CircleAvatar(
-                    radius: 16,
-                    backgroundColor: kBlue.withValues(alpha: 0.15),
-                    child: const Icon(Icons.person, size: 18, color: kBlue),
+                  Container(
+                    width: 36, height: 36,
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFF3B82F6), kBlue],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(10),
+                      boxShadow: [
+                        BoxShadow(
+                          color: kBlue.withValues(alpha: 0.3),
+                          blurRadius: 8,
+                          offset: const Offset(0, 4),
+                        )
+                      ]
+                    ),
+                    child: const Center(
+                      child: Text('P',
+                          style: TextStyle(color: Colors.white,
+                              fontSize: 20, fontWeight: FontWeight.bold)),
+                    ),
                   ),
-                  const SizedBox(width: 8),
-                  Expanded(
+                  const SizedBox(width: 10),
+                  const Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(auth.nama ?? 'Admin Parkir',
-                            style: const TextStyle(fontSize: 11,
-                                fontWeight: FontWeight.w600, color: kText),
+                        Text('ParkirKampus',
+                            style: TextStyle(fontSize: 12,
+                                fontWeight: FontWeight.bold, color: kText),
                             overflow: TextOverflow.ellipsis),
-                        GestureDetector(
-                          onTap: () => Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (_) => const ChangePasswordPage(),
-                            ),
-                          ),
-                          child: const Text('Ganti Password?',
-                              style: TextStyle(fontSize: 10, color: kBlue)),
-                        ),
+                        Text('ADMIN PORTAL',
+                            style: TextStyle(fontSize: 9, color: kMuted,
+                                letterSpacing: 0.8, fontWeight: FontWeight.w600)),
                       ],
                     ),
-                  ),
-                  IconButton(
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(),
-                    icon: const Icon(Icons.logout_rounded,
-                        size: 16, color: kMuted),
-                    onPressed: () => auth.logout(),
                   ),
                 ],
               ),
             ),
-          ),
-        ],
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16),
+              child: Divider(height: 1, color: Color(0xFFF1F5F9)),
+            ),
+            const SizedBox(height: 16),
+            // Nav items
+            Expanded(
+              child: ListView.builder(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                itemCount: _items.length,
+                itemBuilder: (context, i) => _SidebarItem(
+                  item: _items[i],
+                  selected: selectedIndex == i,
+                  onTap: () => onTap(i),
+                ),
+              ),
+            ),
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16),
+              child: Divider(height: 1, color: Color(0xFFF1F5F9)),
+            ),
+            // User info at bottom
+            Consumer<AuthProvider>(
+              builder: (_, auth, __) => Padding(
+                padding: const EdgeInsets.all(16),
+                child: Row(
+                  children: [
+                    CircleAvatar(
+                      radius: 18,
+                      backgroundColor: kBlue.withValues(alpha: 0.1),
+                      child: const Icon(Icons.person, size: 20, color: kBlue),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(auth.nama ?? 'Admin Parkir',
+                              style: const TextStyle(fontSize: 12,
+                                  fontWeight: FontWeight.w700, color: kText),
+                              overflow: TextOverflow.ellipsis),
+                          GestureDetector(
+                            onTap: () => Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => const ChangePasswordPage(),
+                              ),
+                            ),
+                            child: const Text('Ganti Password?',
+                                style: TextStyle(fontSize: 10, color: kBlue, fontWeight: FontWeight.w500)),
+                          ),
+                        ],
+                      ),
+                    ),
+                    IconButton(
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                      icon: const Icon(Icons.logout_rounded,
+                          size: 18, color: kMuted),
+                      onPressed: () => auth.logout(),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -183,26 +216,31 @@ class _SidebarItem extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
-      child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        curve: Curves.easeInOut,
+        margin: const EdgeInsets.only(bottom: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
         decoration: BoxDecoration(
           color: selected ? kBlue.withValues(alpha: 0.1) : Colors.transparent,
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: selected ? kBlue.withValues(alpha: 0.2) : Colors.transparent,
+          )
         ),
         child: Row(
           children: [
             Icon(item.icon,
-                size: 18,
+                size: 20,
                 color: selected ? kBlue : kMuted),
-            const SizedBox(width: 8),
+            const SizedBox(width: 12),
             Expanded(
               child: Text(item.label,
                   style: TextStyle(
                       fontSize: 12,
                       fontWeight: selected
-                          ? FontWeight.w600
-                          : FontWeight.normal,
+                          ? FontWeight.w700
+                          : FontWeight.w500,
                       color: selected ? kBlue : kMuted),
                   overflow: TextOverflow.ellipsis),
             ),

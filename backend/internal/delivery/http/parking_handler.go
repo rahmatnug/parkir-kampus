@@ -28,9 +28,32 @@ func NewParkingHandler(r *gin.Engine, us domain.ParkingUsecase) {
 	scan := r.Group("/api/v1/parking")
 	scan.Use(AuthMiddleware())
 	{
+		scan.GET("/current", handler.GetCurrentParking)
 		scan.POST("/scan", handler.ScanQR)
 		scan.POST("/exit", handler.ExitParking)
 	}
+}
+
+func (h *ParkingHandler) GetCurrentParking(c *gin.Context) {
+	userID := c.MustGet("id_user").(uint)
+	result, err := h.Usecase.GetCurrentParking(userID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"status": "error", "message": err.Error()})
+		return
+	}
+
+	if result == nil {
+		c.JSON(http.StatusOK, gin.H{
+			"status": "success",
+			"data":   nil,
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"status": "success",
+		"data":   result,
+	})
 }
 
 func (h *ParkingHandler) TapIn(c *gin.Context) {
@@ -131,6 +154,9 @@ func (h *ParkingHandler) ScanQR(c *gin.Context) {
 		} else if strings.HasPrefix(errMsg, "NO_VEHICLE:") {
 			statusCode = http.StatusBadRequest
 			errCode = "NO_VEHICLE"
+		} else if strings.HasPrefix(errMsg, "VEHICLE_TYPE_MISMATCH:") {
+			statusCode = http.StatusBadRequest
+			errCode = "VEHICLE_TYPE_MISMATCH"
 		}
 
 		c.JSON(statusCode, gin.H{

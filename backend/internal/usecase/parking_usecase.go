@@ -217,6 +217,11 @@ func (u *parkingUsecase) ProcessParkingEntry(userID uint, qrCode string) (*domai
 		return nil, errors.New("NO_VEHICLE: Anda belum memiliki kendaraan terdaftar. Silakan daftarkan kendaraan terlebih dahulu")
 	}
 
+	// 4b. Anti-Mismatch Validation
+	if strings.ToLower(kendaraan.JenisKendaraan) != strings.ToLower(zone.JenisKendaraan) {
+		return nil, fmt.Errorf("VEHICLE_TYPE_MISMATCH: Maaf, Anda tidak bisa parkir di Zona %s menggunakan %s", strings.Title(zone.JenisKendaraan), strings.Title(kendaraan.JenisKendaraan))
+	}
+
 	// 5. Atomic slot booking
 	transaksi, slot, err := u.repo.BookSlotAndCreateTransaction(userID, kendaraan.IDKendaraan, zone.IDZona)
 	if err != nil {
@@ -234,6 +239,8 @@ func (u *parkingUsecase) ProcessParkingEntry(userID uint, qrCode string) (*domai
 		NomorSlot:   slot.NomorSlot,
 		NamaZona:    zone.NamaZona,
 		Status:      "parkir",
+		XCoord:      slot.XCoord,
+		YCoord:      slot.YCoord,
 	}, nil
 }
 
@@ -306,5 +313,34 @@ func (u *parkingUsecase) broadcastSlotUpdate(zonaID uint) {
 		Tersedia:  int(count),
 		Kapasitas: zone.Kapasitas,
 	})
+}
+
+func (u *parkingUsecase) GetCurrentParking(userID uint) (*domain.ParkingEntryResult, error) {
+	tx, err := u.repo.GetActiveTransaksi(userID)
+	if err != nil {
+		if err.Error() == "record not found" {
+			return nil, nil // No active parking
+		}
+		return nil, err
+	}
+
+	slot, err := u.repo.GetSlotByID(tx.SlotID)
+	if err != nil {
+		return nil, err
+	}
+
+	zone, err := u.repo.GetZoneByID(slot.ZonaID)
+	if err != nil {
+		return nil, err
+	}
+
+	return &domain.ParkingEntryResult{
+		TransaksiID: tx.IDTransaksi,
+		NomorSlot:   slot.NomorSlot,
+		NamaZona:    zone.NamaZona,
+		Status:      "parkir",
+		XCoord:      slot.XCoord,
+		YCoord:      slot.YCoord,
+	}, nil
 }
 

@@ -56,6 +56,7 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
       bool success = await context.read<AuthProvider>().login(
         _usernameController.text.trim(),
         _passwordController.text,
+        _keepLoggedIn,
       );
       if (success) {
         if (!mounted) return;

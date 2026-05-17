@@ -54,6 +54,7 @@ type ZoneWithSlots struct {
 	NamaZona       string `json:"nama_zona"`
 	Deskripsi      string `json:"deskripsi"`
 	Kapasitas      int    `json:"kapasitas"`
+	JenisKendaraan string `json:"jenis_kendaraan"`
 	Status         string `json:"status"`
 	TotalSlots     int    `json:"total_slots"`
 	AvailableSlots int    `json:"available_slots"`
@@ -100,9 +101,9 @@ type AdminUsecase interface {
 	RemovePenalty(userID uint) error
 
 	// Zone CRUD
-	CreateZone(namaZona string, deskripsi string, kapasitas int) error
+	CreateZone(namaZona string, deskripsi string, kapasitas int, jenisKendaraan string) error
 	GetAllZones() ([]ZoneWithSlots, error)
-	UpdateZone(zonaID uint, namaZona string, deskripsi string, kapasitas int) error
+	UpdateZone(zonaID uint, namaZona string, deskripsi string, kapasitas int, jenisKendaraan string) error
 	DeleteZone(zonaID uint) error
 
 	// Slot CRUD

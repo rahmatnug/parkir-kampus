@@ -24,7 +24,7 @@ func (r *userRepository) Create(user *domain.User) error {
 
 func (r *userRepository) FindByEmail(email string) (*domain.User, error) {
 	var user domain.User
-	err := r.db.Where("email = ?", email).First(&user).Error
+	err := r.db.Preload("Kendaraans").Where("email = ? OR nim = ?", email, email).First(&user).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, nil // Or custom error
@@ -36,7 +36,7 @@ func (r *userRepository) FindByEmail(email string) (*domain.User, error) {
 
 func (r *userRepository) FindByID(id uint) (*domain.User, error) {
 	var user domain.User
-	err := r.db.First(&user, id).Error // GORM uses primary key
+	err := r.db.Preload("Kendaraans").First(&user, id).Error // GORM uses primary key
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, nil // Or custom error

@@ -7,9 +7,10 @@ import "time"
 // ──────────────────────────────────────────────────────────────────────────────
 
 const (
-	EventSlotUpdate  = "SLOT_UPDATE"
-	EventQueuePop    = "QUEUE_POP"
-	EventSystemAlert = "SYSTEM_ALERT"
+	EventSlotUpdate   = "SLOT_UPDATE"
+	EventQueuePop     = "QUEUE_POP"
+	EventSystemAlert  = "SYSTEM_ALERT"
+	EventLayoutUpdate = "LAYOUT_UPDATE"
 )
 
 // WSEvent is the canonical JSON envelope sent to every WebSocket client.
@@ -54,5 +55,6 @@ type WSHub interface {
 	NotifySlotUpdate(data SlotUpdateData)
 	NotifyQueuePop(userID uint, data QueuePopData)
 	NotifySystemAlert(data SystemAlertData)
+	NotifyLayoutUpdate()
 }
 

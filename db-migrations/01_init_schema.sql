@@ -38,8 +38,25 @@ CREATE TABLE slot_parkirs (
     id_slot    BIGSERIAL PRIMARY KEY,
     id_zona    BIGINT REFERENCES zona_parkirs(id_zona) ON DELETE CASCADE,
     nomor_slot VARCHAR(20) NOT NULL,
-    status     VARCHAR(20) DEFAULT 'available'
+    status     VARCHAR(20) DEFAULT 'available',
+    x_coord    DOUBLE PRECISION DEFAULT 0.0,
+    y_coord    DOUBLE PRECISION DEFAULT 0.0
 );
+
+-- Seed Data Zona dan Slot
+INSERT INTO zona_parkirs (nama_zona, deskripsi, kapasitas, status) VALUES 
+('Zone A', 'Zona Parkir Motor Fakultas Teknik', 4, 'active'),
+('Zone B', 'Zona Parkir Mobil Gedung Rektorat', 4, 'active');
+
+INSERT INTO slot_parkirs (id_zona, nomor_slot, status, x_coord, y_coord) VALUES 
+(1, 'A1', 'available', 150.5, 200.0),
+(1, 'A2', 'available', 200.5, 200.0),
+(1, 'A3', 'available', 250.5, 200.0),
+(1, 'A4', 'available', 300.5, 200.0),
+(2, 'B1', 'available', 150.5, 400.0),
+(2, 'B2', 'available', 200.5, 400.0),
+(2, 'B3', 'available', 250.5, 400.0),
+(2, 'B4', 'available', 300.5, 400.0);
 
 -- Tabel Kendaraan — ON DELETE CASCADE: hapus user → hapus kendaraan-nya
 CREATE TABLE kendaraans (

@@ -6,6 +6,7 @@ import '../../data/models/parking_zone.dart';
 import '../../data/services/parking_repository.dart';
 import '../../data/services/websocket_service.dart';
 import '../../core/network/api_client.dart';
+import '../../data/services/auth_service.dart';
 
 enum ScanStatus { idle, loading, success, zoneFull, error }
 
@@ -25,6 +26,11 @@ class ParkingProvider extends ChangeNotifier {
   String? _assignedSlot;
   String? _assignedZone;
   int? _assignedTransaksiID;
+  double? _assignedX;
+  double? _assignedY;
+
+  String? _platNomor;
+  String? _jenisKendaraan;
 
   List<ParkingZone> get zones => _zones;
   bool get isLoading => _isLoading;
@@ -36,21 +42,57 @@ class ParkingProvider extends ChangeNotifier {
   String? get assignedSlot => _assignedSlot;
   String? get assignedZone => _assignedZone;
   int? get assignedTransaksiID => _assignedTransaksiID;
+  double? get assignedX => _assignedX;
+  double? get assignedY => _assignedY;
+  String? get platNomor => _platNomor;
+  String? get jenisKendaraan => _jenisKendaraan;
 
   StreamSubscription? _wsSubscription;
   String? _currentToken;
 
-  Future<void> fetchParkingStatus() async {
-    _isLoading = true;
-    _error = null;
+  Future<void> checkVehicleData() async {
+    final authService = AuthService();
+    final data = await authService.getUserData();
+    _platNomor = data['plat_nomor'];
+    _jenisKendaraan = data['jenis_kendaraan'];
     notifyListeners();
+  }
+
+  Future<void> checkActiveSession() async {
+    try {
+      final response = await _apiClient.dio.get('/api/v1/parking/current');
+      if (response.statusCode == 200 && response.data['data'] != null) {
+        final data = response.data['data'];
+        _assignedSlot = data['nomor_slot'];
+        _assignedZone = data['nama_zona'];
+        _assignedTransaksiID = data['id_transaksi'];
+        _assignedX = (data['x_coord'] as num?)?.toDouble() ?? 0.0;
+        _assignedY = (data['y_coord'] as num?)?.toDouble() ?? 0.0;
+        _scanStatus = ScanStatus.success;
+        notifyListeners();
+      }
+    } catch (e) {
+      // Ignore background errors
+    }
+  }
+
+  Future<void> fetchParkingStatus({bool silent = false}) async {
+    if (!silent) {
+      _isLoading = true;
+      notifyListeners();
+    }
+    _error = null;
 
     try {
+      await checkVehicleData();
+      await checkActiveSession();
       _zones = await _repository.getParkingStatus();
     } catch (e) {
       _error = e.toString();
     } finally {
-      _isLoading = false;
+      if (!silent) {
+        _isLoading = false;
+      }
       notifyListeners();
     }
   }
@@ -62,7 +104,18 @@ class ParkingProvider extends ChangeNotifier {
     _scanErrorCode = null;
     _assignedSlot = null;
     _assignedZone = null;
+    _assignedX = null;
+    _assignedY = null;
     notifyListeners();
+
+    await checkVehicleData();
+    if (_platNomor == null || _jenisKendaraan == null || _platNomor!.isEmpty || _jenisKendaraan!.isEmpty) {
+      _scanStatus = ScanStatus.error;
+      _scanErrorCode = 'NO_VEHICLE';
+      _scanErrorMessage = "Anda belum mendaftarkan kendaraan. Silakan lengkapi profil kendaraan Anda.";
+      notifyListeners();
+      return;
+    }
 
     try {
       final response = await _apiClient.dio.post(
@@ -75,6 +128,8 @@ class ParkingProvider extends ChangeNotifier {
         _assignedSlot = data['nomor_slot'];
         _assignedZone = data['nama_zona'];
         _assignedTransaksiID = data['id_transaksi'];
+        _assignedX = (data['x_coord'] as num?)?.toDouble() ?? 0.0;
+        _assignedY = (data['y_coord'] as num?)?.toDouble() ?? 0.0;
         _scanStatus = ScanStatus.success;
       }
     } catch (e) {
@@ -135,6 +190,8 @@ class ParkingProvider extends ChangeNotifier {
     _assignedSlot = null;
     _assignedZone = null;
     _assignedTransaksiID = null;
+    _assignedX = null;
+    _assignedY = null;
     notifyListeners();
   }
 
@@ -171,6 +228,8 @@ class ParkingProvider extends ChangeNotifier {
                 fetchParkingStatus();
               }
             }
+          } else if (data['event'] == 'LAYOUT_UPDATE') {
+            fetchParkingStatus(silent: true);
           } else if (data['event'] == 'QUEUE_POP') {
             final context = navigatorKey.currentContext;
             if (context != null) {

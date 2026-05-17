@@ -6,7 +6,7 @@ import "time"
 type Kendaraan struct {
 	IDKendaraan    uint      `json:"id_kendaraan" gorm:"primaryKey;column:id_kendaraan;autoIncrement"`
 	UserID         uint      `json:"id_user" gorm:"column:id_user;type:bigint"`
-	User           User      `json:"user" gorm:"foreignKey:UserID;references:ID"`
+	User           User      `json:"-" gorm:"foreignKey:UserID;references:ID"`
 	NomorPolisi    string    `json:"nomor_polisi" gorm:"unique;not null;type:varchar(15)"`
 	JenisKendaraan string    `json:"jenis_kendaraan" gorm:"type:varchar(20);check:jenis_kendaraan IN ('motor','mobil')"`
 	Warna          string    `json:"warna" gorm:"type:varchar(30)"`
@@ -15,20 +15,23 @@ type Kendaraan struct {
 
 // ZonaParkir represents the parking zone
 type ZonaParkir struct {
-	IDZona    uint   `json:"id_zona" gorm:"primaryKey;column:id_zona;autoIncrement"`
-	NamaZona  string `json:"nama_zona" gorm:"not null;type:varchar(50)"`
-	Deskripsi string `json:"deskripsi" gorm:"type:text"`
-	Kapasitas int    `json:"kapasitas" gorm:"not null;type:integer"`
-	Status    string `json:"status" gorm:"type:varchar(20);default:'active'"`
+	IDZona         uint   `json:"id_zona" gorm:"primaryKey;column:id_zona;autoIncrement"`
+	NamaZona       string `json:"nama_zona" gorm:"not null;type:varchar(50)"`
+	Deskripsi      string `json:"deskripsi" gorm:"type:text"`
+	Kapasitas      int    `json:"kapasitas" gorm:"not null;type:integer"`
+	JenisKendaraan string `json:"jenis_kendaraan" gorm:"type:varchar(20);default:'motor';check:jenis_kendaraan IN ('motor','mobil')"`
+	Status         string `json:"status" gorm:"type:varchar(20);default:'active'"`
 }
 
 // SlotParkir represents an individual parking slot
 type SlotParkir struct {
-	IDSlot    uint      `json:"id_slot" gorm:"primaryKey;column:id_slot;autoIncrement"`
-	ZonaID    uint      `json:"id_zona" gorm:"column:id_zona;type:bigint"`
+	IDSlot    uint       `json:"id_slot" gorm:"primaryKey;column:id_slot;autoIncrement"`
+	ZonaID    uint       `json:"id_zona" gorm:"column:id_zona;type:bigint"`
 	Zona      ZonaParkir `json:"zona" gorm:"foreignKey:ZonaID;references:IDZona"`
-	NomorSlot string    `json:"nomor_slot" gorm:"not null;type:varchar(20)"`
-	Status    string    `json:"status" gorm:"type:varchar(20);default:'available'"`
+	NomorSlot string     `json:"nomor_slot" gorm:"not null;type:varchar(20)"`
+	Status    string     `json:"status" gorm:"type:varchar(20);default:'available'"`
+	XCoord    float64    `json:"x_coord" gorm:"column:x_coord;type:float;default:0"`
+	YCoord    float64    `json:"y_coord" gorm:"column:y_coord;type:float;default:0"`
 }
 
 // Transaksi represents the parking transaction
@@ -104,10 +107,12 @@ type ParkingRepository interface {
 
 // ParkingEntryResult holds the outcome of a successful scan entry
 type ParkingEntryResult struct {
-	TransaksiID uint   `json:"id_transaksi"`
-	NomorSlot   string `json:"nomor_slot"`
-	NamaZona    string `json:"nama_zona"`
-	Status      string `json:"status"`
+	TransaksiID uint    `json:"id_transaksi"`
+	NomorSlot   string  `json:"nomor_slot"`
+	NamaZona    string  `json:"nama_zona"`
+	Status      string  `json:"status"`
+	XCoord      float64 `json:"x_coord"`
+	YCoord      float64 `json:"y_coord"`
 }
 
 // ParkingUsecase defines the business logic for parking
@@ -117,4 +122,5 @@ type ParkingUsecase interface {
 	AssignSlotFromWaitlist(zonaID uint) error
 	ProcessParkingEntry(userID uint, qrCode string) (*ParkingEntryResult, error)
 	ProcessParkingExit(userID uint) (*Transaksi, error)
+	GetCurrentParking(userID uint) (*ParkingEntryResult, error)
 }

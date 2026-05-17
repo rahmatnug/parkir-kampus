@@ -104,3 +104,14 @@ func (u *userUsecase) ChangePassword(userID uint, currentPassword, newPassword s
 	// 4. Persist
 	return u.userRepo.UpdatePassword(userID, string(hashed))
 }
+
+func (u *userUsecase) GetProfile(userID uint) (*domain.User, error) {
+	user, err := u.userRepo.FindByID(userID)
+	if err != nil {
+		return nil, err
+	}
+	if user == nil {
+		return nil, errors.New("user tidak ditemukan")
+	}
+	return user, nil
+}

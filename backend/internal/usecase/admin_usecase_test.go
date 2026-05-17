@@ -74,11 +74,20 @@ func (m *mockAdminRepo) FindZoneByName(name string) (*domain.ZonaParkir, error) 
 	return m.findZoneByNameResult, m.findZoneByNameErr
 }
 
+// ─── Mock WebSocket Hub ─────────────────────────────────────────────────────
+
+type mockWSHub struct{}
+
+func (m *mockWSHub) NotifySlotUpdate(data domain.SlotUpdateData)        {}
+func (m *mockWSHub) NotifyQueuePop(userID uint, data domain.QueuePopData) {}
+func (m *mockWSHub) NotifySystemAlert(data domain.SystemAlertData)       {}
+func (m *mockWSHub) NotifyLayoutUpdate()                                 {}
+
 // ─── Tests ──────────────────────────────────────────────────────────────────
 
 func TestAddPenalty_NegativePoints_Rejected(t *testing.T) {
 	repo := &mockAdminRepo{}
-	uc := NewAdminUsecase(repo)
+	uc := NewAdminUsecase(repo, &mockWSHub{})
 
 	err := uc.AddPenalty(1, -10, "Parking violation")
 	if err == nil {
@@ -95,7 +104,7 @@ func TestAddPenalty_NegativePoints_Rejected(t *testing.T) {
 
 func TestAddPenalty_ZeroPoints_Rejected(t *testing.T) {
 	repo := &mockAdminRepo{}
-	uc := NewAdminUsecase(repo)
+	uc := NewAdminUsecase(repo, &mockWSHub{})
 
 	err := uc.AddPenalty(1, 0, "Some violation")
 	if err == nil {
@@ -105,7 +114,7 @@ func TestAddPenalty_ZeroPoints_Rejected(t *testing.T) {
 
 func TestAddPenalty_EmptyKeterangan_Rejected(t *testing.T) {
 	repo := &mockAdminRepo{}
-	uc := NewAdminUsecase(repo)
+	uc := NewAdminUsecase(repo, &mockWSHub{})
 
 	err := uc.AddPenalty(1, 10, "   ")
 	if err == nil {
@@ -117,7 +126,7 @@ func TestAddPenalty_Success_NoBlacklist(t *testing.T) {
 	repo := &mockAdminRepo{
 		totalPenaltyPoints: 50, // Below threshold (100)
 	}
-	uc := NewAdminUsecase(repo)
+	uc := NewAdminUsecase(repo, &mockWSHub{})
 
 	err := uc.AddPenalty(1, 10, "Parking violation")
 	if err != nil {
@@ -135,7 +144,7 @@ func TestAddPenalty_Success_AutoBlacklist(t *testing.T) {
 	repo := &mockAdminRepo{
 		totalPenaltyPoints: 100, // Meets threshold
 	}
-	uc := NewAdminUsecase(repo)
+	uc := NewAdminUsecase(repo, &mockWSHub{})
 
 	err := uc.AddPenalty(1, 20, "Repeated violation")
 	if err != nil {
@@ -153,7 +162,7 @@ func TestDeleteUser_WithActiveTransaction_Rejected(t *testing.T) {
 	repo := &mockAdminRepo{
 		hasActiveTxn: true,
 	}
-	uc := NewAdminUsecase(repo)
+	uc := NewAdminUsecase(repo, &mockWSHub{})
 
 	err := uc.DeleteUser(1)
 	if err == nil {
@@ -168,7 +177,7 @@ func TestDeleteUser_NoActiveTransaction_Success(t *testing.T) {
 	repo := &mockAdminRepo{
 		hasActiveTxn: false,
 	}
-	uc := NewAdminUsecase(repo)
+	uc := NewAdminUsecase(repo, &mockWSHub{})
 
 	err := uc.DeleteUser(1)
 	if err != nil {
@@ -181,7 +190,7 @@ func TestDeleteUser_NoActiveTransaction_Success(t *testing.T) {
 
 func TestDeleteUser_ZeroID_Rejected(t *testing.T) {
 	repo := &mockAdminRepo{}
-	uc := NewAdminUsecase(repo)
+	uc := NewAdminUsecase(repo, &mockWSHub{})
 
 	err := uc.DeleteUser(0)
 	if err == nil {
@@ -193,9 +202,9 @@ func TestCreateZone_DuplicateName_Rejected(t *testing.T) {
 	repo := &mockAdminRepo{
 		findZoneByNameResult: &domain.ZonaParkir{IDZona: 1, NamaZona: "Zone A"},
 	}
-	uc := NewAdminUsecase(repo)
+	uc := NewAdminUsecase(repo, &mockWSHub{})
 
-	err := uc.CreateZone("Zone A", "desc", 50)
+	err := uc.CreateZone("Zone A", "desc", 50, "motor")
 	if err == nil {
 		t.Fatal("expected error for duplicate zone name, got nil")
 	}
@@ -206,9 +215,9 @@ func TestCreateZone_DuplicateName_Rejected(t *testing.T) {
 
 func TestCreateZone_ZeroCapacity_Rejected(t *testing.T) {
 	repo := &mockAdminRepo{}
-	uc := NewAdminUsecase(repo)
+	uc := NewAdminUsecase(repo, &mockWSHub{})
 
-	err := uc.CreateZone("Zone X", "desc", 0)
+	err := uc.CreateZone("Zone X", "desc", 0, "motor")
 	if err == nil {
 		t.Fatal("expected error for zero capacity, got nil")
 	}
@@ -216,9 +225,9 @@ func TestCreateZone_ZeroCapacity_Rejected(t *testing.T) {
 
 func TestCreateZone_EmptyName_Rejected(t *testing.T) {
 	repo := &mockAdminRepo{}
-	uc := NewAdminUsecase(repo)
+	uc := NewAdminUsecase(repo, &mockWSHub{})
 
-	err := uc.CreateZone("  ", "desc", 50)
+	err := uc.CreateZone("  ", "desc", 50, "motor")
 	if err == nil {
 		t.Fatal("expected error for empty zone name, got nil")
 	}
@@ -228,9 +237,9 @@ func TestCreateZone_Success(t *testing.T) {
 	repo := &mockAdminRepo{
 		findZoneByNameResult: nil, // No duplicate
 	}
-	uc := NewAdminUsecase(repo)
+	uc := NewAdminUsecase(repo, &mockWSHub{})
 
-	err := uc.CreateZone("Zone D", "new zone", 30)
+	err := uc.CreateZone("Zone D", "new zone", 30, "mobil")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -243,7 +252,7 @@ func TestAddPenalty_RepoFailure_PropagatesError(t *testing.T) {
 	repo := &mockAdminRepo{
 		addPenaltyErr: errors.New("db connection lost"),
 	}
-	uc := NewAdminUsecase(repo)
+	uc := NewAdminUsecase(repo, &mockWSHub{})
 
 	err := uc.AddPenalty(1, 10, "Violation")
 	if err == nil {

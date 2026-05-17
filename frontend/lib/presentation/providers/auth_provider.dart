@@ -55,6 +55,7 @@ class AuthProvider extends ChangeNotifier {
     final token = await _authService.getToken();
     if (token != null && !JwtDecoder.isExpired(token)) {
       _extractRole(token);
+      await _authService.fetchProfile();
       await _loadUserData();
       _status = AuthStatus.authenticated;
     } else {
@@ -64,13 +65,13 @@ class AuthProvider extends ChangeNotifier {
   }
 
   /// Login and extract role from JWT
-  Future<bool> login(String email, String password) async {
+  Future<bool> login(String email, String password, bool rememberMe) async {
     _status = AuthStatus.loading;
     _errorMessage = null;
     notifyListeners();
 
     try {
-      final token = await _authService.login(email, password);
+      final token = await _authService.login(email, password, rememberMe);
       _extractRole(token);
       await _loadUserData();
       _status = AuthStatus.authenticated;

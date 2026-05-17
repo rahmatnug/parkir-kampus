@@ -7,11 +7,15 @@ import '../../widgets/parking_map_overlay.dart';
 class ExitParkingPage extends StatefulWidget {
   final String zone;
   final String slotNumber;
+  final double xCoord;
+  final double yCoord;
 
   const ExitParkingPage({
     super.key,
     required this.zone,
     required this.slotNumber,
+    this.xCoord = 120.0,
+    this.yCoord = 120.0,
   });
 
   @override
@@ -118,7 +122,7 @@ class _ExitParkingPageState extends State<ExitParkingPage> {
               ),
             ),
             const SizedBox(height: 24),
-            ParkingMapOverlay(zone: widget.zone, slotNumber: widget.slotNumber),
+            ParkingMapOverlay(zone: widget.zone, slotNumber: widget.slotNumber, xCoord: widget.xCoord, yCoord: widget.yCoord),
             Container(
               padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
