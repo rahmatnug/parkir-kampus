@@ -65,116 +65,174 @@ class _AdminDashboardHomeState extends State<AdminDashboardHome> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Header
-            Row(
-              children: [
-                const Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Dashboard',
-                          style: TextStyle(fontSize: 26,
-                              fontWeight: FontWeight.bold, color: _kText)),
-                      SizedBox(height: 4),
-                      Text('Real-time parking monitoring and statistics',
-                          style: TextStyle(fontSize: 13, color: _kMuted)),
-                    ],
-                  ),
-                ),
-                _OutlineBtn(
-                  icon: Icons.calendar_today_outlined,
-                  label: 'Last 24 Hours',
-                  onTap: () {
-                    // Filter waktu — tampilkan snackbar info (data real sudah dari API)
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Menampilkan data 24 jam terakhir'),
-                        duration: Duration(seconds: 2),
-                      ),
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final isMobile = constraints.maxWidth <= 600;
+                return isMobile 
+                  ? Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('Dashboard', style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: _kText)),
+                        const SizedBox(height: 4),
+                        const Text('Real-time parking monitoring and statistics', style: TextStyle(fontSize: 13, color: _kMuted)),
+                        const SizedBox(height: 16),
+                        Wrap(
+                          spacing: 10,
+                          runSpacing: 10,
+                          children: [
+                            _OutlineBtn(
+                              icon: Icons.calendar_today_outlined,
+                              label: 'Last 24 Hours',
+                              onTap: () {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('Menampilkan data 24 jam terakhir'), duration: Duration(seconds: 2)),
+                                );
+                              },
+                            ),
+                            ElevatedButton.icon(
+                              onPressed: () {
+                                Navigator.of(context).push(MaterialPageRoute(builder: (_) => ExportPreviewPage(activities: _activities)));
+                              },
+                              icon: const Icon(Icons.download_rounded, size: 16),
+                              label: const Text('Export Data', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                              style: ElevatedButton.styleFrom(backgroundColor: _kBlue, foregroundColor: Colors.white, elevation: 0, padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
+                            ),
+                          ],
+                        ),
+                      ],
+                    )
+                  : Row(
+                      children: [
+                        const Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text('Dashboard', style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: _kText)),
+                              SizedBox(height: 4),
+                              Text('Real-time parking monitoring and statistics', style: TextStyle(fontSize: 13, color: _kMuted)),
+                            ],
+                          ),
+                        ),
+                        _OutlineBtn(
+                          icon: Icons.calendar_today_outlined,
+                          label: 'Last 24 Hours',
+                          onTap: () {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Menampilkan data 24 jam terakhir'), duration: Duration(seconds: 2)),
+                            );
+                          },
+                        ),
+                        const SizedBox(width: 10),
+                        ElevatedButton.icon(
+                          onPressed: () {
+                            Navigator.of(context).push(MaterialPageRoute(builder: (_) => ExportPreviewPage(activities: _activities)));
+                          },
+                          icon: const Icon(Icons.download_rounded, size: 16),
+                          label: const Text('Export Data', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                          style: ElevatedButton.styleFrom(backgroundColor: _kBlue, foregroundColor: Colors.white, elevation: 0, padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
+                        ),
+                      ],
                     );
-                  },
-                ),
-                const SizedBox(width: 10),
-                ElevatedButton.icon(
-                  onPressed: () {
-                    Navigator.of(context).push(MaterialPageRoute(
-                      builder: (_) => ExportPreviewPage(activities: _activities),
-                    ));
-                  },
-                  icon: const Icon(Icons.download_rounded, size: 16),
-                  label: const Text('Export Data',
-                      style: TextStyle(fontSize: 13,
-                          fontWeight: FontWeight.w600)),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: _kBlue,
-                    foregroundColor: Colors.white,
-                    elevation: 0,
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 12),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8)),
-                  ),
-                ),
-              ],
+              },
             ),
             const SizedBox(height: 28),
 
             // KPI Cards
-            Row(
-              children: [
-                Expanded(child: _KpiCard(
-                  icon: Icons.local_parking_rounded,
-                  iconColor: _kBlue,
-                  label: 'Total Capacity',
-                  value: '$cap',
-                  badge: '0%',
-                  badgeColor: _kMuted,
-                )),
-                const SizedBox(width: 16),
-                Expanded(child: _KpiCard(
-                  icon: Icons.directions_car_rounded,
-                  iconColor: _kBlue,
-                  label: 'Vehicles Parked',
-                  value: '$active',
-                  badge: '$userCount Reg Users', // reused badge slot
-                  badgeColor: _kGreen,
-                )),
-                const SizedBox(width: 16),
-                Expanded(child: _KpiCard(
-                  icon: Icons.check_circle_outline_rounded,
-                  iconColor: _kGreen,
-                  label: 'Available Slots',
-                  value: '$avail',
-                  badge: 'Real-time',
-                  badgeColor: _kMuted,
-                )),
-              ],
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final isMobile = constraints.maxWidth < 600;
+                // on mobile, 2 cards per row. On desktop, 3 cards per row.
+                final cardWidth = isMobile ? (constraints.maxWidth - 16) / 2 : (constraints.maxWidth - 32) / 3;
+                return Wrap(
+                  spacing: 16,
+                  runSpacing: 16,
+                  children: [
+                    SizedBox(
+                      width: cardWidth,
+                      child: _KpiCard(
+                        icon: Icons.local_parking_rounded,
+                        iconColor: _kBlue,
+                        label: 'Total Capacity',
+                        value: '$cap',
+                        badge: '0%',
+                        badgeColor: _kMuted,
+                      ),
+                    ),
+                    SizedBox(
+                      width: cardWidth,
+                      child: _KpiCard(
+                        icon: Icons.directions_car_rounded,
+                        iconColor: _kBlue,
+                        label: 'Vehicles Parked',
+                        value: '$active',
+                        badge: '$userCount Reg Users',
+                        badgeColor: _kGreen,
+                      ),
+                    ),
+                    SizedBox(
+                      width: isMobile ? constraints.maxWidth : cardWidth,
+                      child: _KpiCard(
+                        icon: Icons.check_circle_outline_rounded,
+                        iconColor: _kGreen,
+                        label: 'Available Slots',
+                        value: '$avail',
+                        badge: 'Real-time',
+                        badgeColor: _kMuted,
+                      ),
+                    ),
+                  ],
+                );
+              },
             ),
             const SizedBox(height: 24),
 
             // Charts Row
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  flex: 5,
-                  child: _ChartCard(
-                    title: 'Occupancy per Zone',
-                    badge: '+2.4% vs last day',
-                    badgeColor: _kGreen,
-                    child: _BarChartWidget(activities: _activities),
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  flex: 5,
-                  child: _ChartCard(
-                    title: 'Activity Timeline (Today)',
-                    badge: 'Real-time',
-                    badgeColor: _kBlue,
-                    child: _LineChartWidget(activities: _activities),
-                  ),
-                ),
-              ],
+            LayoutBuilder(
+              builder: (context, constraints) {
+                if (constraints.maxWidth <= 600) {
+                  return Column(
+                    children: [
+                      _ChartCard(
+                        title: 'Occupancy per Zone',
+                        badge: '+2.4% vs last day',
+                        badgeColor: _kGreen,
+                        child: _BarChartWidget(activities: _activities),
+                      ),
+                      const SizedBox(height: 16),
+                      _ChartCard(
+                        title: 'Activity Timeline (Today)',
+                        badge: 'Real-time',
+                        badgeColor: _kBlue,
+                        child: _LineChartWidget(activities: _activities),
+                      ),
+                    ],
+                  );
+                }
+                return Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      flex: 5,
+                      child: _ChartCard(
+                        title: 'Occupancy per Zone',
+                        badge: '+2.4% vs last day',
+                        badgeColor: _kGreen,
+                        child: _BarChartWidget(activities: _activities),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      flex: 5,
+                      child: _ChartCard(
+                        title: 'Activity Timeline (Today)',
+                        badge: 'Real-time',
+                        badgeColor: _kBlue,
+                        child: _LineChartWidget(activities: _activities),
+                      ),
+                    ),
+                  ],
+                );
+              },
             ),
             const SizedBox(height: 24),
 
@@ -223,9 +281,12 @@ class _KpiCard extends StatelessWidget {
                 child: Icon(icon, size: 20, color: iconColor),
               ),
               const Spacer(),
-              Text(badge,
-                  style: TextStyle(fontSize: 12,
-                      fontWeight: FontWeight.w600, color: badgeColor)),
+              Flexible(
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(badge, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: badgeColor)),
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 16),
@@ -568,27 +629,40 @@ class _RecentActivityTableState extends State<_RecentActivityTable> {
               ],
             ),
           ),
-          // Header
-          Container(
-            padding: const EdgeInsets.symmetric(
-                horizontal: 20, vertical: 10),
-            color: const Color(0xFFF8F9FB),
-            child: const Row(
-              children: [
-                Expanded(flex: 3,
-                    child: _TableHeader('KENDARAAN DAN PLAT NOMOR')),
-                Expanded(flex: 2, child: _TableHeader('USER TYPE')),
-                Expanded(flex: 2, child: _TableHeader('ZONA')),
-                Expanded(flex: 2, child: _TableHeader('WAKTU')),
-                Expanded(flex: 2, child: _TableHeader('STATUS')),
-              ],
-            ),
+          // Table Wrapper
+          LayoutBuilder(
+            builder: (context, constraints) {
+              return SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: SizedBox(
+                  width: constraints.maxWidth < 800 ? 800 : constraints.maxWidth,
+                  child: Column(
+                    children: [
+                      // Header
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                        color: const Color(0xFFF8F9FB),
+                        child: const Row(
+                          children: [
+                            Expanded(flex: 3, child: _TableHeader('KENDARAAN DAN PLAT NOMOR')),
+                            Expanded(flex: 2, child: _TableHeader('USER TYPE')),
+                            Expanded(flex: 2, child: _TableHeader('ZONA')),
+                            Expanded(flex: 2, child: _TableHeader('WAKTU')),
+                            Expanded(flex: 2, child: _TableHeader('STATUS')),
+                          ],
+                        ),
+                      ),
+                      // Rows
+                      if (_activities.isEmpty)
+                         const Padding(padding: EdgeInsets.all(20), child: Text('Belum ada aktivitas parkir')),
+                      for (final row in _activities)
+                        _ActivityRowWidget(row: row),
+                    ],
+                  ),
+                ),
+              );
+            },
           ),
-          // Rows
-          if (_activities.isEmpty)
-             const Padding(padding: EdgeInsets.all(20), child: Text('Belum ada aktivitas parkir')),
-          for (final row in _activities)
-            _ActivityRowWidget(row: row),
         ],
       ),
     );

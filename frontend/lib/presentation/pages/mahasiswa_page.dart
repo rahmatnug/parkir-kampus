@@ -4,7 +4,7 @@ import '../providers/auth_provider.dart';
 import '../widgets/status_card.dart';
 import '../widgets/qr_identity_card.dart';
 import '../../data/models/vehicle_status.dart';
-import 'riwayat_parkir_page.dart';
+import 'user_history_page.dart';
 
 class MahasiswaPage extends StatelessWidget {
   const MahasiswaPage({super.key});
@@ -94,7 +94,7 @@ class MahasiswaPage extends StatelessWidget {
             ),
           ),
         ),
-        body: const TabBarView(children: [_StatusView(), RiwayatParkirPage()]),
+        body: const TabBarView(children: [_StatusView(), UserHistoryPage()]),
       ),
     );
   }

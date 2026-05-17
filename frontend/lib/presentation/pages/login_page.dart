@@ -367,8 +367,10 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                     const SizedBox(height: 20),
 
                     // Footer help text
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      alignment: WrapAlignment.center,
                       children: [
                         const Text(
                           'Need help? Contact the IT Service Desk or ',
@@ -769,8 +771,10 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
 
                   // Footer help
                   const Center(
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
+                    child: Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      alignment: WrapAlignment.center,
                       children: [
                         Text(
                           'Need further assistance? ',

@@ -297,118 +297,137 @@ class _BlacklistPageState extends State<BlacklistPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: _kBg,
-      body: Padding(
-        padding: const EdgeInsets.all(32),
+      body: SingleChildScrollView(
+        scrollDirection: Axis.vertical,
+        child: Padding(
+          padding: const EdgeInsets.all(32),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // ── Header ────────────────────────────────────────────────────────
-            Row(
-              children: [
-                const Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('Blacklist Management',
-                        style: TextStyle(
-                            fontSize: 26, fontWeight: FontWeight.bold, color: _kText)),
-                    SizedBox(height: 4),
-                    Text(
-                      'Review and manage access restrictions for campus facilities.',
-                      style: TextStyle(fontSize: 13, color: _kMuted),
-                    ),
-                  ],
-                ),
-                const Spacer(),
-                ElevatedButton.icon(
-                  onPressed: _showAddRestrictionDialog,
-                  icon: const Icon(Icons.person_add_disabled_rounded, size: 18),
-                  label: const Text('Add New Restriction'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: _kBlue,
-                    foregroundColor: Colors.white,
-                    elevation: 0,
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                  ),
-                ),
-              ],
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final isMobile = constraints.maxWidth <= 600;
+                return isMobile 
+                  ? Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('Blacklist Management', style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: _kText)),
+                        const SizedBox(height: 4),
+                        const Text('Review and manage access restrictions for campus facilities.', style: TextStyle(fontSize: 13, color: _kMuted)),
+                        const SizedBox(height: 16),
+                        ElevatedButton.icon(
+                          onPressed: _showAddRestrictionDialog,
+                          icon: const Icon(Icons.person_add_disabled_rounded, size: 18),
+                          label: const Text('Add New Restriction'),
+                          style: ElevatedButton.styleFrom(backgroundColor: _kBlue, foregroundColor: Colors.white, elevation: 0, padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
+                        ),
+                      ],
+                    )
+                  : Row(
+                      children: [
+                        const Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('Blacklist Management', style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: _kText)),
+                            SizedBox(height: 4),
+                            Text('Review and manage access restrictions for campus facilities.', style: TextStyle(fontSize: 13, color: _kMuted)),
+                          ],
+                        ),
+                        const Spacer(),
+                        ElevatedButton.icon(
+                          onPressed: _showAddRestrictionDialog,
+                          icon: const Icon(Icons.person_add_disabled_rounded, size: 18),
+                          label: const Text('Add New Restriction'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: _kBlue,
+                            foregroundColor: Colors.white,
+                            elevation: 0,
+                            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          ),
+                        ),
+                      ],
+                    );
+              },
             ),
             const SizedBox(height: 24),
 
             // ── Summary Cards ──────────────────────────────────────────────────
-            Row(
-              children: [
-                Expanded(
-                  child: Container(
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: _kBorder),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            const Text('TOTAL BLACKLISTED', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: _kMuted, letterSpacing: 0.5)),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                              decoration: BoxDecoration(color: const Color(0xFFDCFCE7), borderRadius: BorderRadius.circular(4)),
-                              child: const Text('+5.2%', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: _kGreen)),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-                        Text('${_items.length}', style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: _kText)),
-                      ],
-                    ),
+            LayoutBuilder(
+              builder: (context, constraints) {
+                Widget buildTotalCard() => Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12), border: Border.all(color: _kBorder)),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text('TOTAL BLACKLISTED', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: _kMuted, letterSpacing: 0.5)),
+                          Container(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4), decoration: BoxDecoration(color: const Color(0xFFDCFCE7), borderRadius: BorderRadius.circular(4)), child: const Text('+5.2%', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: _kGreen))),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Text('${_items.length}', style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: _kText)),
+                    ],
                   ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Container(
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: _kBorder),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            const Text('ACTIVE RESTRICTIONS', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: _kMuted, letterSpacing: 0.5)),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                              decoration: BoxDecoration(color: const Color(0xFFEFF6FF), borderRadius: BorderRadius.circular(4)),
-                              child: const Text('Monthly', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: _kBlue)),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-                        Text('${_items.fold<int>(0, (sum, i) => sum + ((i['jumlah_kasus'] as num?)?.toInt() ?? 0))}', style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: _kText)),
-                      ],
-                    ),
+                );
+                Widget buildActiveCard() => Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12), border: Border.all(color: _kBorder)),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text('ACTIVE RESTRICTIONS', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: _kMuted, letterSpacing: 0.5)),
+                          Container(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4), decoration: BoxDecoration(color: const Color(0xFFEFF6FF), borderRadius: BorderRadius.circular(4)), child: const Text('Monthly', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: _kBlue))),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Text('${_items.fold<int>(0, (sum, i) => sum + ((i['jumlah_kasus'] as num?)?.toInt() ?? 0))}', style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: _kText)),
+                    ],
                   ),
-                ),
-              ],
+                );
+
+                if (constraints.maxWidth <= 600) {
+                  return Column(
+                    children: [
+                      buildTotalCard(),
+                      const SizedBox(height: 16),
+                      buildActiveCard(),
+                    ],
+                  );
+                }
+                return Row(
+                  children: [
+                    Expanded(child: buildTotalCard()),
+                    const SizedBox(width: 16),
+                    Expanded(child: buildActiveCard()),
+                  ],
+                );
+              },
             ),
             const SizedBox(height: 24),
 
             // ── Table / Content ───────────────────────────────────────────────
-            Expanded(
-              child: Container(
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: _kBorder),
-                ),
-                child: Column(
-                  children: [
+            LayoutBuilder(
+              builder: (context, constraints) {
+                  return SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: SizedBox(
+                      width: constraints.maxWidth < 900 ? 900 : constraints.maxWidth,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: _kBorder),
+                        ),
+                        child: Column(
+                          children: [
                     // Toolbar
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
@@ -476,19 +495,19 @@ class _BlacklistPageState extends State<BlacklistPage> {
                     ),
                     
                     // Rows
-                    Expanded(
-                      child: _isLoading 
-                        ? const Center(child: CircularProgressIndicator(color: _kBlue))
-                        : _items.isEmpty
-                          ? const Center(child: Text('No restricted users.', style: TextStyle(color: _kMuted)))
-                          : ListView.builder(
-                              itemCount: _items.length,
-                              itemBuilder: (ctx, i) => _BlacklistRow(
-                                item: _items[i],
-                                onRemove: () => _removeBlacklist(_items[i]),
-                              ),
+                    _isLoading 
+                      ? const Center(child: Padding(padding: EdgeInsets.all(40), child: CircularProgressIndicator(color: _kBlue)))
+                      : _items.isEmpty
+                        ? const Center(child: Padding(padding: EdgeInsets.all(40), child: Text('No restricted users.', style: TextStyle(color: _kMuted))))
+                        : ListView.builder(
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            itemCount: _items.length,
+                            itemBuilder: (ctx, i) => _BlacklistRow(
+                              item: _items[i],
+                              onRemove: () => _removeBlacklist(_items[i]),
                             ),
-                    ),
+                          ),
                     
                     // Footer
                     Container(
@@ -518,13 +537,17 @@ class _BlacklistPageState extends State<BlacklistPage> {
                         ],
                       ),
                     ),
-                  ],
-                ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  );
+                },
               ),
-            ),
           ],
         ),
       ),
+    ),
     );
   }
 }

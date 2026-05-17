@@ -262,8 +262,10 @@ class _UserManagementPageState extends State<UserManagementPage> {
 
     return Scaffold(
       backgroundColor: _kBg,
-      body: Padding(
-        padding: const EdgeInsets.all(32),
+      body: SingleChildScrollView(
+        scrollDirection: Axis.vertical,
+        child: Padding(
+          padding: const EdgeInsets.all(32),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -273,26 +275,41 @@ class _UserManagementPageState extends State<UserManagementPage> {
             const SizedBox(height: 24),
 
             // ── KPI Cards ────────────────────────────────────────────────────
-            Row(
-              children: [
-                Expanded(child: _StatCard(
-                    label: 'Total Users', value: '${_users.length}',
-                    valueColor: _kText)),
-                const SizedBox(width: 16),
-                Expanded(child: _StatCard(
-                    label: 'Active Today', value: '$activeCount',
-                    valueColor: _kText)),
-                const SizedBox(width: 16),
-                Expanded(child: _StatCard(
-                    label: 'Blacklisted', value: '$blacklistedCount',
-                    valueColor: _kRed)),
-              ],
+            LayoutBuilder(
+              builder: (context, constraints) {
+                if (constraints.maxWidth <= 600) {
+                  return Column(
+                    children: [
+                      _StatCard(label: 'Total Users', value: '${_users.length}', valueColor: _kText),
+                      const SizedBox(height: 16),
+                      _StatCard(label: 'Active Today', value: '$activeCount', valueColor: _kText),
+                      const SizedBox(height: 16),
+                      _StatCard(label: 'Blacklisted', value: '$blacklistedCount', valueColor: _kRed),
+                    ],
+                  );
+                }
+                return Row(
+                  children: [
+                    Expanded(child: _StatCard(
+                        label: 'Total Users', value: '${_users.length}',
+                        valueColor: _kText)),
+                    const SizedBox(width: 16),
+                    Expanded(child: _StatCard(
+                        label: 'Active Today', value: '$activeCount',
+                        valueColor: _kText)),
+                    const SizedBox(width: 16),
+                    Expanded(child: _StatCard(
+                        label: 'Blacklisted', value: '$blacklistedCount',
+                        valueColor: _kRed)),
+                  ],
+                );
+              },
             ),
             const SizedBox(height: 20),
 
             // ── Search bar ───────────────────────────────────────────────────
             SizedBox(
-              width: 350,
+              width: double.infinity,
               height: 40,
               child: TextField(
                 controller: _searchCtrl,
@@ -319,15 +336,20 @@ class _UserManagementPageState extends State<UserManagementPage> {
             const SizedBox(height: 16),
 
             // ── Table ────────────────────────────────────────────────────────
-            Expanded(
-              child: Container(
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: _kBorder),
-                ),
-                child: Column(
-                  children: [
+            LayoutBuilder(
+              builder: (context, constraints) {
+                  return SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: SizedBox(
+                      width: constraints.maxWidth < 900 ? 900 : constraints.maxWidth,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: _kBorder),
+                        ),
+                        child: Column(
+                          children: [
                     // Column headers
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
@@ -346,9 +368,10 @@ class _UserManagementPageState extends State<UserManagementPage> {
                       ),
                     ),
                     // Data rows
-                    Expanded(
-                      child: _filtered.isEmpty
-                          ? Center(
+                    _filtered.isEmpty
+                        ? Center(
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 40),
                               child: Column(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
@@ -360,16 +383,18 @@ class _UserManagementPageState extends State<UserManagementPage> {
                                   ),
                                 ],
                               ),
-                            )
-                          : ListView.builder(
-                              itemCount: _paginatedFiltered.length,
-                              itemBuilder: (ctx, i) => _UserRow(
-                                user: _paginatedFiltered[i],
-                                onEdit:   () => _showEditDialog(_paginatedFiltered[i]),
-                                onDelete: () => _confirmDelete(_paginatedFiltered[i]),
-                              ),
                             ),
-                    ),
+                          )
+                        : ListView.builder(
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            itemCount: _paginatedFiltered.length,
+                            itemBuilder: (ctx, i) => _UserRow(
+                              user: _paginatedFiltered[i],
+                              onEdit:   () => _showEditDialog(_paginatedFiltered[i]),
+                              onDelete: () => _confirmDelete(_paginatedFiltered[i]),
+                            ),
+                          ),
                     // Footer (Pagination)
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
@@ -443,13 +468,17 @@ class _UserManagementPageState extends State<UserManagementPage> {
                         ],
                       ),
                     ),
-                  ],
-                ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  );
+                },
               ),
-            ),
           ],
         ),
       ),
+    ),
     );
   }
 }

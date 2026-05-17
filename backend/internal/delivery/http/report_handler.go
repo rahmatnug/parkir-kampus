@@ -20,6 +20,7 @@ func NewReportHandler(r *gin.Engine, uc domain.ReportUsecase) {
 	}
 
 	reports := r.Group("/api/v1/reports")
+	reports.Use(AuthMiddleware(), AuthAdminMiddleware())
 	{
 		reports.GET("/daily", handler.GetDailyReport)
 		reports.GET("/analytical", handler.GetAnalyticalReport)

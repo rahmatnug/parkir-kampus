@@ -2,6 +2,8 @@ package main
 
 import (
 	"log"
+	"os"
+	"strings"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
@@ -55,15 +57,30 @@ func main() {
 	r := gin.Default()
 
 	// ─── CORS Middleware ──────────────────────────────────────────────────────
-	// Allow all origins so Flutter Web / Mobile can reach the API.
-	// Tighten this to specific origins in production.
-	r.Use(cors.New(cors.Config{
-		AllowAllOrigins:  true,
+	// In production, set CORS_ORIGINS env var to restrict allowed origins.
+	// Example: CORS_ORIGINS=https://parkir.kampus.ac.id,https://admin.parkir.kampus.ac.id
+	// If CORS_ORIGINS is not set, falls back to allow all (development mode).
+	corsOrigins := os.Getenv("CORS_ORIGINS")
+	corsConfig := cors.Config{
 		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization", "Accept"},
 		ExposeHeaders:    []string{"Content-Length"},
 		AllowCredentials: false,
-	}))
+	}
+	if corsOrigins != "" {
+		// Production: only allow specified origins
+		origins := strings.Split(corsOrigins, ",")
+		for i := range origins {
+			origins[i] = strings.TrimSpace(origins[i])
+		}
+		corsConfig.AllowOrigins = origins
+		log.Printf("CORS restricted to: %v", origins)
+	} else {
+		// Development: allow all
+		corsConfig.AllowAllOrigins = true
+		log.Println("CORS: AllowAllOrigins=true (development mode)")
+	}
+	r.Use(cors.New(corsConfig))
 	// ─────────────────────────────────────────────────────────────────────────
 
 	// ─── HTTP handlers ──────────────────────────────────────────────────

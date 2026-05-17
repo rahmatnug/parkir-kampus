@@ -115,3 +115,11 @@ func (u *userUsecase) GetProfile(userID uint) (*domain.User, error) {
 	}
 	return user, nil
 }
+
+func (u *userUsecase) UpdateProfileImageURL(userID uint, imageURL string) error {
+	user, err := u.userRepo.FindByID(userID)
+	if err != nil || user == nil {
+		return errors.New("user tidak ditemukan")
+	}
+	return u.userRepo.UpdateProfileImageURL(userID, imageURL)
+}

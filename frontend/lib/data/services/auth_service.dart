@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
+import 'package:dio/dio.dart' as dio_pkg;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../../core/config/app_config.dart';
 
@@ -88,6 +89,7 @@ class AuthService {
             await _writeKey('user_plat_nomor', kendaraan['nomor_polisi']?.toString(), isInStorage);
             await _writeKey('user_jenis_kendaraan', kendaraan['jenis_kendaraan']?.toString(), isInStorage);
           }
+          await _writeKey('user_profile_image_url', user['profile_image_url']?.toString(), isInStorage);
         }
       }
     } catch (e) {
@@ -126,6 +128,7 @@ class AuthService {
             await _writeKey('user_plat_nomor', kendaraan['nomor_polisi']?.toString(), rememberMe);
             await _writeKey('user_jenis_kendaraan', kendaraan['jenis_kendaraan']?.toString(), rememberMe);
           }
+          await _writeKey('user_profile_image_url', user['profile_image_url']?.toString(), rememberMe);
         }
         await _writeKey(_tokenKey, token, rememberMe);
         return token;
@@ -192,7 +195,43 @@ class AuthService {
       'role': await _readKey(_roleKey),
       'plat_nomor': await _readKey('user_plat_nomor'),
       'jenis_kendaraan': await _readKey('user_jenis_kendaraan'),
+      'profile_image_url': await _readKey('user_profile_image_url'),
     };
+  }
+
+  /// Uploads avatar image to backend, returns the new public URL.
+  Future<String> uploadAvatar(String filePath) async {
+    final token = await getToken();
+    if (token == null) throw Exception('Tidak ada token');
+
+    final d = dio_pkg.Dio();
+    d.options.headers['Authorization'] = 'Bearer $token';
+    d.options.connectTimeout = const Duration(seconds: 15);
+    d.options.sendTimeout = const Duration(seconds: 30);
+    d.options.receiveTimeout = const Duration(seconds: 15);
+
+    final formData = dio_pkg.FormData.fromMap({
+      'avatar': await dio_pkg.MultipartFile.fromFile(
+        filePath,
+        filename: filePath.split('/').last.split('\\').last,
+      ),
+    });
+
+    final response = await d.post(
+      '${AppConfig.baseUrl}/api/user/avatar',
+      data: formData,
+    );
+
+    if (response.statusCode == 200) {
+      final url = response.data['profile_image_url'] as String;
+      // Persist the new URL
+      final actualTokenKey = '$_activePrefix$_tokenKey';
+      final isInStorage = await _storage.read(key: actualTokenKey) != null;
+      await _writeKey('user_profile_image_url', url, isInStorage);
+      return url;
+    } else {
+      throw Exception(response.data['message'] ?? 'Upload gagal');
+    }
   }
 
   Future<bool> isAuthenticated() async {

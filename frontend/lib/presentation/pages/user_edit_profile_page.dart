@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:http/http.dart' as http;
+import 'package:image_picker/image_picker.dart';
 import 'dart:convert';
 import '../providers/auth_provider.dart';
 import '../../core/config/app_config.dart';
+import '../../data/services/auth_service.dart';
 
 class UserEditProfilePage extends StatefulWidget {
   const UserEditProfilePage({super.key});
@@ -16,7 +18,9 @@ class _UserEditProfilePageState extends State<UserEditProfilePage> {
   late TextEditingController _platCtrl;
   late TextEditingController _kendaraanCtrl;
   bool _isLoading = false;
+  bool _isUploadingAvatar = false;
   bool _hasChanges = false;
+  final _authService = AuthService();
 
   @override
   void initState() {
@@ -111,31 +115,36 @@ class _UserEditProfilePageState extends State<UserEditProfilePage> {
                 ),
               ),
               const SizedBox(height: 20),
-              const Text('Foto Profil',
+              const Text('Ubah Foto Profil',
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
               const SizedBox(height: 4),
-              const Text('Fitur upload foto profil akan segera tersedia.',
+              const Text('Pilih sumber gambar untuk foto profil Anda.',
                 style: TextStyle(fontSize: 13, color: Color(0xFF64748B))),
               const SizedBox(height: 20),
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFFFF7ED),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: const Color(0xFFFED7AA)),
-                ),
-                child: const Row(
-                  children: [
-                    Icon(Icons.info_outline_rounded, color: Color(0xFFF59E0B), size: 20),
-                    SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        'Integrasi Supabase Storage sedang disiapkan. Saat ini Anda dapat mengedit data kendaraan.',
-                        style: TextStyle(fontSize: 12, color: Color(0xFF92400E), height: 1.4),
-                      ),
+              Row(
+                children: [
+                  Expanded(
+                    child: _PhotoOptionCard(
+                      icon: Icons.photo_library_rounded,
+                      label: 'Galeri',
+                      onTap: () {
+                        Navigator.pop(ctx);
+                        _pickAndUploadImage(ImageSource.gallery);
+                      },
                     ),
-                  ],
-                ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _PhotoOptionCard(
+                      icon: Icons.camera_alt_rounded,
+                      label: 'Kamera',
+                      onTap: () {
+                        Navigator.pop(ctx);
+                        _pickAndUploadImage(ImageSource.camera);
+                      },
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: 16),
               SizedBox(
@@ -147,7 +156,7 @@ class _UserEditProfilePageState extends State<UserEditProfilePage> {
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                     padding: const EdgeInsets.symmetric(vertical: 14),
                   ),
-                  child: const Text('Tutup', style: TextStyle(color: Color(0xFF0F172A), fontWeight: FontWeight.w600)),
+                  child: const Text('Batal', style: TextStyle(color: Color(0xFF0F172A), fontWeight: FontWeight.w600)),
                 ),
               ),
             ],
@@ -155,6 +164,48 @@ class _UserEditProfilePageState extends State<UserEditProfilePage> {
         ),
       ),
     );
+  }
+
+  Future<void> _pickAndUploadImage(ImageSource source) async {
+    try {
+      final picker = ImagePicker();
+      final XFile? picked = await picker.pickImage(
+        source: source,
+        maxWidth: 512,
+        maxHeight: 512,
+        imageQuality: 80,
+      );
+
+      if (picked == null) return; // User cancelled
+
+      setState(() => _isUploadingAvatar = true);
+
+      final newUrl = await _authService.uploadAvatar(picked.path);
+
+      // Refresh auth provider to update UI everywhere
+      if (!mounted) return;
+      await context.read<AuthProvider>().refreshUserData();
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Foto profil berhasil diperbarui! 🎉'),
+          backgroundColor: Color(0xFF16A34A),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Gagal mengunggah foto: $e'),
+          backgroundColor: const Color(0xFFDC2626),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _isUploadingAvatar = false);
+    }
   }
 
   @override
@@ -202,11 +253,13 @@ class _UserEditProfilePageState extends State<UserEditProfilePage> {
                         shape: BoxShape.circle,
                       ),
                       child: ClipOval(
-                        child: (auth.profileImageUrl != null && auth.profileImageUrl!.isNotEmpty)
-                          ? Image.network(auth.profileImageUrl!,
-                              fit: BoxFit.cover, width: 100, height: 100,
-                              errorBuilder: (_, __, ___) => const Icon(Icons.person_rounded, size: 60, color: Color(0xFF2563EB)))
-                          : const Icon(Icons.person_rounded, size: 60, color: Color(0xFF2563EB)),
+                        child: _isUploadingAvatar
+                          ? const Center(child: CircularProgressIndicator(strokeWidth: 3, color: Color(0xFF2563EB)))
+                          : (auth.profileImageUrl != null && auth.profileImageUrl!.isNotEmpty)
+                            ? Image.network(auth.profileImageUrl!,
+                                fit: BoxFit.cover, width: 100, height: 100,
+                                errorBuilder: (_, __, ___) => const Icon(Icons.person_rounded, size: 60, color: Color(0xFF2563EB)))
+                            : const Icon(Icons.person_rounded, size: 60, color: Color(0xFF2563EB)),
                       ),
                     ),
                     Positioned(
@@ -349,6 +402,37 @@ class _UserEditProfilePageState extends State<UserEditProfilePage> {
           ),
         ),
       ],
+    );
+  }
+}
+
+// Reusable card for photo source selection
+class _PhotoOptionCard extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+  const _PhotoOptionCard({required this.icon, required this.label, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 24),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF8FAFC),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: const Color(0xFFE2E8F0)),
+        ),
+        child: Column(
+          children: [
+            Icon(icon, size: 32, color: const Color(0xFF2563EB)),
+            const SizedBox(height: 8),
+            Text(label,
+              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF0F172A))),
+          ],
+        ),
+      ),
     );
   }
 }

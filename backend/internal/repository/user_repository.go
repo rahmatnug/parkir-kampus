@@ -51,3 +51,9 @@ func (r *userRepository) UpdatePassword(userID uint, newPasswordHash string) err
 		Where("id_user = ?", userID).
 		Update("password_hash", newPasswordHash).Error
 }
+
+func (r *userRepository) UpdateProfileImageURL(userID uint, imageURL string) error {
+	return r.db.Model(&domain.User{}).
+		Where("id_user = ?", userID).
+		Update("profile_image_url", imageURL).Error
+}

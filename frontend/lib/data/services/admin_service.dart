@@ -74,36 +74,44 @@ class AdminService {
 
   // ─── DELETE: Remove user ──────────────────────────────────────────────────
   Future<void> deleteUser(int userId) async {
-    final token = await _getToken();
-    final response = await http.delete(
-      Uri.parse('$_baseUrl/admin/users/$userId'),
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $token',
-      },
-    ).timeout(const Duration(seconds: 10));
+    try {
+      final token = await _getToken();
+      final response = await http.delete(
+        Uri.parse('$_baseUrl/admin/users/$userId'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      ).timeout(const Duration(seconds: 10));
 
-    if (response.statusCode != 200) {
-      final body = jsonDecode(response.body);
-      throw Exception(body['message'] ?? 'Gagal menghapus user');
+      if (response.statusCode != 200) {
+        final body = jsonDecode(response.body);
+        throw Exception(body['message'] ?? 'Gagal menghapus user');
+      }
+    } catch (e) {
+      throw Exception('Gagal menghapus user: $e');
     }
   }
 
   // ─── PUT: Update user role ────────────────────────────────────────────────
   Future<void> updateUserRole(int userId, String newRole) async {
-    final token = await _getToken();
-    final response = await http.put(
-      Uri.parse('$_baseUrl/admin/users/$userId/role'),
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $token',
-      },
-      body: jsonEncode({'role': newRole}),
-    ).timeout(const Duration(seconds: 10));
+    try {
+      final token = await _getToken();
+      final response = await http.put(
+        Uri.parse('$_baseUrl/admin/users/$userId/role'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({'role': newRole}),
+      ).timeout(const Duration(seconds: 10));
 
-    if (response.statusCode != 200) {
-      final body = jsonDecode(response.body);
-      throw Exception(body['message'] ?? 'Gagal mengubah role');
+      if (response.statusCode != 200) {
+        final body = jsonDecode(response.body);
+        throw Exception(body['message'] ?? 'Gagal mengubah role');
+      }
+    } catch (e) {
+      throw Exception('Gagal mengubah role: $e');
     }
   }
 
@@ -129,56 +137,68 @@ class AdminService {
   }
   // ─── POST: Force Exit Activity ────────────────────────────────────────────
   Future<void> forceExitActivity(int activityId) async {
-    final token = await _getToken();
-    final response = await http.post(
-      Uri.parse('$_baseUrl/admin/activities/$activityId/force-exit'),
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $token',
-      },
-    ).timeout(const Duration(seconds: 10));
+    try {
+      final token = await _getToken();
+      final response = await http.post(
+        Uri.parse('$_baseUrl/admin/activities/$activityId/force-exit'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      ).timeout(const Duration(seconds: 10));
 
-    if (response.statusCode != 200) {
-      final body = jsonDecode(response.body);
-      throw Exception(body['message'] ?? 'Gagal force exit kendaraan');
+      if (response.statusCode != 200) {
+        final body = jsonDecode(response.body);
+        throw Exception(body['message'] ?? 'Gagal force exit kendaraan');
+      }
+    } catch (e) {
+      throw Exception('Gagal force exit: $e');
     }
   }
 
   // ─── POST: Add Penalty ────────────────────────────────────────────────────
   Future<void> addPenalty(int userId, int poin, String keterangan) async {
-    final token = await _getToken();
-    final response = await http.post(
-      Uri.parse('$_baseUrl/admin/users/$userId/penalty'),
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $token',
-      },
-      body: jsonEncode({
-        'poin': poin,
-        'keterangan': keterangan,
-      }),
-    ).timeout(const Duration(seconds: 10));
+    try {
+      final token = await _getToken();
+      final response = await http.post(
+        Uri.parse('$_baseUrl/admin/users/$userId/penalty'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({
+          'poin': poin,
+          'keterangan': keterangan,
+        }),
+      ).timeout(const Duration(seconds: 10));
 
-    if (response.statusCode != 200) {
-      final body = jsonDecode(response.body);
-      throw Exception(body['message'] ?? 'Gagal menambahkan penalti');
+      if (response.statusCode != 200) {
+        final body = jsonDecode(response.body);
+        throw Exception(body['message'] ?? 'Gagal menambahkan penalti');
+      }
+    } catch (e) {
+      throw Exception('Gagal menambahkan penalti: $e');
     }
   }
 
   // ─── DELETE: Remove Penalty ─────────────────────────────────────────────────
   Future<void> removePenalty(int userId) async {
-    final token = await _getToken();
-    final response = await http.delete(
-      Uri.parse('$_baseUrl/admin/users/$userId/penalty'),
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $token',
-      },
-    ).timeout(const Duration(seconds: 10));
+    try {
+      final token = await _getToken();
+      final response = await http.delete(
+        Uri.parse('$_baseUrl/admin/users/$userId/penalty'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      ).timeout(const Duration(seconds: 10));
 
-    if (response.statusCode != 200) {
-      final body = jsonDecode(response.body);
-      throw Exception(body['message'] ?? 'Gagal menghapus penalti');
+      if (response.statusCode != 200) {
+        final body = jsonDecode(response.body);
+        throw Exception(body['message'] ?? 'Gagal menghapus penalti');
+      }
+    } catch (e) {
+      throw Exception('Gagal menghapus penalti: $e');
     }
   }
 }

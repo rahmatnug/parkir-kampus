@@ -180,61 +180,77 @@ class _AktivitasParkirPageState extends State<AktivitasParkirPage> {
               const SizedBox(height: 24),
 
               // ── Summary Cards ──────────────────────────────────────────────
-              Row(
-                children: [
-                  Expanded(
-                    child: _OccupancyCard(
-                      title: 'Total Occupancy',
-                      percent: _occupancyPercent,
-                      trend: '+2%',
-                      trendUp: true,
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: _StatCard(
-                      icon: Icons.directions_car_rounded,
-                      iconColor: _kBlue,
-                      title: 'Parkir Terisi',
-                      value: '$_parkedCount',
-                      subtitle: 'Kendaraan aktif',
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: _StatCard(
-                      icon: Icons.check_circle_outline_rounded,
-                      iconColor: _kGreen,
-                      title: 'Slot Tersedia',
-                      value: '—',
-                      subtitle: 'Real-time data',
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: _StatCard(
-                      icon: Icons.calendar_today_rounded,
-                      iconColor: _kOrange,
-                      title: 'Terparkir Hari Ini',
-                      value: '$_todayCount',
-                      subtitle: 'Transaksi hari ini',
-                      badge: _overstayCount > 0 ? '$_overstayCount overstay' : null,
-                    ),
-                  ),
-                ],
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  final isMobile = constraints.maxWidth < 600;
+                  // On mobile, 2 cards per row. On desktop, 4 cards per row.
+                  final cardWidth = isMobile ? (constraints.maxWidth - 16) / 2 : (constraints.maxWidth - 48) / 4;
+                  return Wrap(
+                    spacing: 16,
+                    runSpacing: 16,
+                    children: [
+                      SizedBox(
+                        width: cardWidth,
+                        child: _OccupancyCard(
+                          title: 'Total Occupancy',
+                          percent: _occupancyPercent,
+                          trend: '+2%',
+                          trendUp: true,
+                        ),
+                      ),
+                      SizedBox(
+                        width: cardWidth,
+                        child: _StatCard(
+                          icon: Icons.directions_car_rounded,
+                          iconColor: _kBlue,
+                          title: 'Parkir Terisi',
+                          value: '$_parkedCount',
+                          subtitle: 'Kendaraan aktif',
+                        ),
+                      ),
+                      SizedBox(
+                        width: cardWidth,
+                        child: _StatCard(
+                          icon: Icons.check_circle_outline_rounded,
+                          iconColor: _kGreen,
+                          title: 'Slot Tersedia',
+                          value: '—',
+                          subtitle: 'Real-time data',
+                        ),
+                      ),
+                      SizedBox(
+                        width: cardWidth,
+                        child: _StatCard(
+                          icon: Icons.calendar_today_rounded,
+                          iconColor: _kOrange,
+                          title: 'Terparkir Hari Ini',
+                          value: '$_todayCount',
+                          subtitle: 'Transaksi hari ini',
+                          badge: _overstayCount > 0 ? '$_overstayCount overstay' : null,
+                        ),
+                      ),
+                    ],
+                  );
+                },
               ),
               const SizedBox(height: 24),
 
               // ── Activity Log Table ─────────────────────────────────────────
-              Container(
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: _kBorder),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  return SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: SizedBox(
+                      width: constraints.maxWidth < 900 ? 900 : constraints.maxWidth,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: _kBorder),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
                     // Toolbar
                     Padding(
                       padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
@@ -409,8 +425,12 @@ class _AktivitasParkirPageState extends State<AktivitasParkirPage> {
                           : null,
                       onPage: (p) => setState(() => _currentPage = p),
                     ),
-                  ],
-                ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  );
+                },
               ),
             ],
           ),

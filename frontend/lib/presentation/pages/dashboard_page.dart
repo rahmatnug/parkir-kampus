@@ -33,17 +33,45 @@ class _DashboardPageState extends State<DashboardPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: kBg,
-      body: Row(
-        children: [
-          _Sidebar(
-            selectedIndex: _selectedIndex,
-            onTap: (i) => setState(() => _selectedIndex = i),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isMobile = constraints.maxWidth <= 600;
+        return Scaffold(
+          backgroundColor: kBg,
+          appBar: isMobile
+              ? AppBar(
+                  backgroundColor: Colors.white,
+                  title: const Text('Admin Portal', style: TextStyle(color: kText, fontSize: 16, fontWeight: FontWeight.bold)),
+                  iconTheme: const IconThemeData(color: kText),
+                  elevation: 0,
+                  surfaceTintColor: Colors.transparent,
+                )
+              : null,
+          drawer: isMobile
+              ? Drawer(
+                  backgroundColor: Colors.transparent,
+                  elevation: 0,
+                  child: _Sidebar(
+                    selectedIndex: _selectedIndex,
+                    onTap: (i) {
+                      setState(() => _selectedIndex = i);
+                      Navigator.pop(context); // Close drawer automatically
+                    },
+                  ),
+                )
+              : null,
+          body: Row(
+            children: [
+              if (!isMobile)
+                _Sidebar(
+                  selectedIndex: _selectedIndex,
+                  onTap: (i) => setState(() => _selectedIndex = i),
+                ),
+              Expanded(child: _pages[_selectedIndex]),
+            ],
           ),
-          Expanded(child: _pages[_selectedIndex]),
-        ],
-      ),
+        );
+      },
     );
   }
 }
