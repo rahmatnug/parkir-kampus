@@ -20,7 +20,22 @@ func NewUserUsecase(repo domain.UserRepository) domain.UserUsecase {
 	}
 }
 
-func (u *userUsecase) Register(nama, nim, email, password, platNomor, jenisKendaraan string) (*domain.User, error) {
+func (u *userUsecase) Register(nama, nim, email, password, platNomor, jenisKendaraan, roleName string) (*domain.User, error) {
+	// Role validation
+	roleName = strings.ToLower(strings.TrimSpace(roleName))
+	var roleID uint
+	if roleName == "mahasiswa" {
+		roleID = 3
+		if !strings.HasSuffix(email, "@mhs.unesa.ac.id") {
+			return nil, errors.New("registrasi mahasiswa wajib menggunakan email kampus @mhs.unesa.ac.id")
+		}
+	} else if roleName == "tamu" {
+		roleID = 5
+	} else {
+		// Default fallback
+		roleID = 3
+	}
+
 	existingUser, err := u.userRepo.FindByEmail(email)
 	if err != nil {
 		return nil, err
@@ -37,7 +52,7 @@ func (u *userUsecase) Register(nama, nim, email, password, platNomor, jenisKenda
 	user := &domain.User{
 		Email:        email,
 		PasswordHash: string(hashedPassword),
-		RoleID:       3, // Default to mahasiswa for open registration
+		RoleID:       roleID,
 		Nama:         nama,
 		Nim:          nim,
 		Status:       "active",

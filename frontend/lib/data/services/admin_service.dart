@@ -201,4 +201,52 @@ class AdminService {
       throw Exception('Gagal menghapus penalti: $e');
     }
   }
+
+  // ─── GET: Zones (used for QR Codes) ─────────────────────────────────────────
+  Future<List<dynamic>> getQrCodes() async {
+    try {
+      final token = await _getToken();
+      final response = await http.get(
+        Uri.parse('$_baseUrl/admin/zones'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return data['data'] ?? [];
+      }
+      throw Exception('Failed to load zones');
+    } catch (e) {
+      throw Exception('Network error: $e');
+    }
+  }
+
+  // ─── POST: Generate QR (Creates a Zone) ───────────────────────────────────
+  Future<void> generateQrCode(String name, {String deskripsi = '', int kapasitas = 50, String jenisKendaraan = 'motor'}) async {
+    try {
+      final token = await _getToken();
+      final response = await http.post(
+        Uri.parse('$_baseUrl/admin/zones'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({
+          'nama_zona': name,
+          'deskripsi': deskripsi,
+          'kapasitas': kapasitas,
+          'jenis_kendaraan': jenisKendaraan,
+        }),
+      ).timeout(const Duration(seconds: 10));
+
+      if (response.statusCode != 200 && response.statusCode != 201) {
+        final body = jsonDecode(response.body);
+        throw Exception(body['message'] ?? 'Gagal membuat zona');
+      }
+    } catch (e) {
+      throw Exception('Gagal membuat zona: $e');
+    }
+  }
 }

@@ -25,16 +25,14 @@ func NewParkingUsecase(repo domain.ParkingRepository, userRepo domain.UserReposi
 
 func (u *parkingUsecase) getWaitlistPriority(roleName string) int64 {
 	switch roleName {
-	case "dosen":
+	case "tamu":
 		return 1
-	case "staff":
+	case "dosen", "staff":
 		return 2
 	case "mahasiswa":
 		return 3
-	case "tamu":
-		return 4
 	default:
-		return 5
+		return 4
 	}
 }
 

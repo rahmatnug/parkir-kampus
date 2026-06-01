@@ -114,11 +114,17 @@ class _QRScanPageState extends State<QRScanPage>
         ),
       );
     } else if (status == ScanStatus.zoneFull) {
+      final availableZones = provider.zones
+          .where((z) => z.tersedia > 0 && 
+                        z.jenisKendaraan.toLowerCase() == (provider.jenisKendaraan ?? 'motor').toLowerCase())
+          .map((z) => z.nama)
+          .toList();
+
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
           builder: (_) => ParkingFullPage(
-            availableZones: const ['B', 'C'],
+            availableZones: availableZones.isEmpty ? const ['Belum ada zona lain'] : availableZones,
             vehicleType: provider.jenisKendaraan ?? 'Motor',
           ),
         ),

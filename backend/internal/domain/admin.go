@@ -67,6 +67,7 @@ type AdminRepository interface {
 	GetAllActivities() ([]AdminActivityItem, error)
 	DeleteUser(userID uint) error
 	UpdateUserRole(userID uint, newRole string) error
+	UpdateUserStatus(userID uint, newStatus string) error
 	GetBlacklistedUsers() ([]BlacklistItem, error)
 	ForceExitActivity(activityID uint) error
 	AddPenalty(userID uint, poin int, keterangan string) error
@@ -95,6 +96,7 @@ type AdminUsecase interface {
 	GetActivityLogs() ([]AdminActivityItem, error)
 	DeleteUser(userID uint) error
 	UpdateUserRole(userID uint, newRole string) error
+	UpdateUserStatus(userID uint, newStatus string) error
 	GetBlacklist() ([]BlacklistItem, error)
 	ForceExitActivity(activityID uint) error
 	AddPenalty(userID uint, poin int, keterangan string) error

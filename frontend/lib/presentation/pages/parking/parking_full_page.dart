@@ -1,14 +1,17 @@
 import 'package:flutter/material.dart';
+import '../../../data/services/parking_repository.dart';
 import '../../widgets/global_parking_layout.dart';
 
 class ParkingFullPage extends StatefulWidget {
   final List<String> availableZones;
   final String vehicleType;
+  final int? waitlistRank;
 
   const ParkingFullPage({
     super.key,
     required this.availableZones,
     required this.vehicleType,
+    this.waitlistRank,
   });
 
   @override
@@ -17,6 +20,7 @@ class ParkingFullPage extends StatefulWidget {
 
 class _ParkingFullPageState extends State<ParkingFullPage> {
   bool _notifyCardVisible = true;
+  final ParkingRepository _parkingRepository = ParkingRepository();
 
   @override
   Widget build(BuildContext context) {
@@ -44,9 +48,11 @@ class _ParkingFullPageState extends State<ParkingFullPage> {
               ),
             ),
             const SizedBox(height: 24),
-            const Text(
-              'TEMPAT PENUH',
-              style: TextStyle(
+            Text(
+              widget.waitlistRank != null && widget.waitlistRank! > 0
+                  ? 'MASUK DAFTAR TUNGGU'
+                  : 'TEMPAT PENUH',
+              style: const TextStyle(
                 fontFamily: 'Montserrat',
                 fontSize: 24,
                 fontWeight: FontWeight.w800,
@@ -54,10 +60,12 @@ class _ParkingFullPageState extends State<ParkingFullPage> {
               ),
             ),
             const SizedBox(height: 8),
-            const Text(
-              'SILAKAN CARI TEMPAT PARKIR DI ZONA\nLAIN',
+            Text(
+              widget.waitlistRank != null && widget.waitlistRank! > 0
+                  ? 'ANDA SAAT INI BERADA DALAM ANTREAN'
+                  : 'SILAKAN CARI TEMPAT PARKIR DI ZONA\nLAIN',
               textAlign: TextAlign.center,
-              style: TextStyle(
+              style: const TextStyle(
                 fontFamily: 'Montserrat',
                 fontSize: 14,
                 fontWeight: FontWeight.w500,
@@ -74,7 +82,9 @@ class _ParkingFullPageState extends State<ParkingFullPage> {
                 border: Border.all(color: Colors.grey.shade200),
               ),
               child: Text(
-                'SLOT KOSONG UNTUK ${widget.vehicleType.toUpperCase()}\nTERSEDIA DI ZONA $zonesText',
+                widget.waitlistRank != null && widget.waitlistRank! > 0
+                    ? 'POSISI ANDA DI ANTREAN: ${widget.waitlistRank}'
+                    : 'SLOT KOSONG UNTUK ${widget.vehicleType.toUpperCase()}\nTERSEDIA DI ZONA $zonesText',
                 textAlign: TextAlign.center,
                 style: const TextStyle(
                   fontFamily: 'Montserrat',
@@ -105,7 +115,10 @@ class _ParkingFullPageState extends State<ParkingFullPage> {
                             color: Colors.white.withValues(alpha: 0.2),
                             borderRadius: BorderRadius.circular(8),
                           ),
-                          child: const Icon(Icons.notifications_none, color: Colors.white),
+                          child: const Icon(
+                            Icons.notifications_none,
+                            color: Colors.white,
+                          ),
                         ),
                         const SizedBox(width: 12),
                         const Expanded(
@@ -120,8 +133,13 @@ class _ParkingFullPageState extends State<ParkingFullPage> {
                           ),
                         ),
                         IconButton(
-                          icon: const Icon(Icons.close, color: Colors.black, size: 20),
-                          onPressed: () => setState(() => _notifyCardVisible = false),
+                          icon: const Icon(
+                            Icons.close,
+                            color: Colors.black,
+                            size: 20,
+                          ),
+                          onPressed: () =>
+                              setState(() => _notifyCardVisible = false),
                         ),
                         Container(
                           decoration: const BoxDecoration(
@@ -129,21 +147,44 @@ class _ParkingFullPageState extends State<ParkingFullPage> {
                             shape: BoxShape.circle,
                           ),
                           child: IconButton(
-                            icon: const Icon(Icons.check, color: Colors.white, size: 20),
+                            icon: const Icon(
+                              Icons.check,
+                              color: Colors.white,
+                              size: 20,
+                            ),
                             padding: EdgeInsets.zero,
                             constraints: const BoxConstraints(),
-                            onPressed: () {
+                            onPressed: () async {
                               setState(() => _notifyCardVisible = false);
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Notifikasi diaktifkan! Kami akan memberitahu saat slot tersedia.'),
-                                  backgroundColor: Color(0xFF16A34A),
-                                  behavior: SnackBarBehavior.floating,
-                                ),
-                              );
+                              try {
+                                await _parkingRepository.registerNotification(
+                                  widget.availableZones.join(', '),
+                                );
+                                if (!context.mounted) return;
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text(
+                                      'Notifikasi diaktifkan! Kami akan memberitahu saat slot tersedia.',
+                                    ),
+                                    backgroundColor: Color(0xFF16A34A),
+                                    behavior: SnackBarBehavior.floating,
+                                  ),
+                                );
+                              } catch (e) {
+                                if (!context.mounted) return;
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      'Gagal mengaktifkan notifikasi: $e',
+                                    ),
+                                    backgroundColor: Colors.red,
+                                    behavior: SnackBarBehavior.floating,
+                                  ),
+                                );
+                              }
                             },
                           ),
-                        )
+                        ),
                       ],
                     ),
                     const SizedBox(height: 12),
@@ -173,10 +214,16 @@ class _ParkingFullPageState extends State<ParkingFullPage> {
                 ),
                 child: const Row(
                   children: [
-                    Icon(Icons.check_circle_rounded, color: Color(0xFF16A34A), size: 20),
+                    Icon(
+                      Icons.check_circle_rounded,
+                      color: Color(0xFF16A34A),
+                      size: 20,
+                    ),
                     SizedBox(width: 8),
-                    Text('Kartu notifikasi telah ditutup',
-                      style: TextStyle(fontSize: 13, color: Color(0xFF64748B))),
+                    Text(
+                      'Kartu notifikasi telah ditutup',
+                      style: TextStyle(fontSize: 13, color: Color(0xFF64748B)),
+                    ),
                   ],
                 ),
               ),

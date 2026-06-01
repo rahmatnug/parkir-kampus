@@ -148,6 +148,12 @@ func (r *adminRepository) UpdateUserRole(userID uint, newRole string) error {
 		Update("id_role", role.ID).Error
 }
 
+func (r *adminRepository) UpdateUserStatus(userID uint, status string) error {
+	return r.db.Model(&domain.User{}).
+		Where("id_user = ?", userID).
+		Update("status", status).Error
+}
+
 // GetBlacklistedUsers returns users with cumulative penalty >= 30 points
 func (r *adminRepository) GetBlacklistedUsers() ([]domain.BlacklistItem, error) {
 	var items []domain.BlacklistItem

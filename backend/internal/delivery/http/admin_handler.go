@@ -42,6 +42,13 @@ func NewAdminHandler(r *gin.Engine, us domain.AdminUsecase) {
 		adminRoutes.GET("/zones/:id/slots", handler.GetSlotsByZone)
 		adminRoutes.DELETE("/slots/:id", handler.DeleteSlot)
 	}
+
+	// Fix for 404 Admin Blacklist API
+	adminV1Routes := r.Group("/api/v1/admin")
+	adminV1Routes.Use(AuthMiddleware(), AuthAdminMiddleware())
+	{
+		adminV1Routes.PATCH("/users/:id/blacklist", handler.ToggleBlacklist)
+	}
 }
 
 // ─── Existing Handlers ──────────────────────────────────────────────────────
@@ -113,6 +120,31 @@ func (h *AdminHandler) UpdateUserRole(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"status": "success", "message": "Role berhasil diperbarui"})
+}
+
+// ToggleBlacklist handles PATCH /api/v1/admin/users/:id/blacklist
+func (h *AdminHandler) ToggleBlacklist(c *gin.Context) {
+	idStr := c.Param("id")
+	id, err := strconv.ParseUint(idStr, 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"status": "error", "message": "ID tidak valid"})
+		return
+	}
+
+	var input struct {
+		Status string `json:"status" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&input); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"status": "error", "message": err.Error()})
+		return
+	}
+
+	if err := h.AdminUsecase.UpdateUserStatus(uint(id), input.Status); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"status": "error", "message": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"status": "success", "message": "Status blacklist berhasil diperbarui"})
 }
 
 // GetBlacklist handles GET /api/admin/blacklist

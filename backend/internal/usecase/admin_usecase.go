@@ -65,6 +65,17 @@ func (u *adminUsecase) UpdateUserRole(userID uint, newRole string) error {
 	return u.adminRepo.UpdateUserRole(userID, newRole)
 }
 
+func (u *adminUsecase) UpdateUserStatus(userID uint, newStatus string) error {
+	if userID == 0 {
+		return errors.New("user ID tidak valid")
+	}
+	newStatus = strings.TrimSpace(strings.ToLower(newStatus))
+	if newStatus == "" {
+		return errors.New("status tidak boleh kosong")
+	}
+	return u.adminRepo.UpdateUserStatus(userID, newStatus)
+}
+
 func (u *adminUsecase) GetBlacklist() ([]domain.BlacklistItem, error) {
 	return u.adminRepo.GetBlacklistedUsers()
 }
@@ -100,10 +111,15 @@ func (u *adminUsecase) AddPenalty(userID uint, poin int, keterangan string) erro
 		return fmt.Errorf("gagal cek total poin: %w", err)
 	}
 
-	if totalPoin >= BlacklistThreshold {
-		alasan := fmt.Sprintf("Otomatis blacklist: akumulasi poin penalti mencapai %d (batas: %d)", totalPoin, BlacklistThreshold)
+	if totalPoin >= domain.MaxPenaltyPoints {
+		alasan := fmt.Sprintf("Otomatis blacklist: akumulasi poin penalti mencapai %d (batas: %d)", totalPoin, domain.MaxPenaltyPoints)
 		if err := u.adminRepo.CreateBlacklist(userID, alasan); err != nil {
 			return fmt.Errorf("gagal membuat blacklist otomatis: %w", err)
+		}
+		
+		// Ensure user status is updated to "blacklist"
+		if err := u.adminRepo.UpdateUserStatus(userID, "blacklist"); err != nil {
+			return fmt.Errorf("gagal update status user ke blacklist: %w", err)
 		}
 	}
 

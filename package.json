@@ -1,0 +1,23 @@
+{
+  "name": "parkir-kampus",
+  "version": "1.0.0",
+  "description": "Sistem Manajemen Parkir Kampus Terdistribusi. Menampilkan alokasi slot otomatis berbasis hierarki (RBAC) &amp; antrean dinamis real-time. Dibangun dengan Golang (Clean Architecture), PostgreSQL, Redis, dan Flutter",
+  "main": "index.js",
+  "scripts": {},
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/rahmatnug/parkir-kampus.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/rahmatnug/parkir-kampus/issues"
+  },
+  "homepage": "https://github.com/rahmatnug/parkir-kampus#readme",
+  "devDependencies": {
+    "@playwright/test": "^1.60.0",
+    "@types/node": "^25.9.1"
+  }
+}

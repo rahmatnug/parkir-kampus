@@ -62,6 +62,7 @@ func (a *UserHandler) Register(c *gin.Context) {
 		Password       string `json:"password" binding:"required"`
 		PlatNomor      string `json:"plat_nomor"`
 		JenisKendaraan string `json:"jenis_kendaraan"`
+		Role           string `json:"role"`
 	}
 
 	if err := c.ShouldBindJSON(&input); err != nil {
@@ -69,7 +70,7 @@ func (a *UserHandler) Register(c *gin.Context) {
 		return
 	}
 
-	user, err := a.UserUsecase.Register(input.Nama, input.Nim, input.Email, input.Password, input.PlatNomor, input.JenisKendaraan)
+	user, err := a.UserUsecase.Register(input.Nama, input.Nim, input.Email, input.Password, input.PlatNomor, input.JenisKendaraan, input.Role)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

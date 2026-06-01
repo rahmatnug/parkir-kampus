@@ -32,6 +32,7 @@ func (m *mockAdminRepo) GetDashboardStats() (*domain.DashboardStats, error)     
 func (m *mockAdminRepo) GetAllUsers() ([]domain.AdminUserItem, error)              { return nil, nil }
 func (m *mockAdminRepo) GetAllActivities() ([]domain.AdminActivityItem, error)     { return nil, nil }
 func (m *mockAdminRepo) UpdateUserRole(userID uint, newRole string) error           { return nil }
+func (m *mockAdminRepo) UpdateUserStatus(userID uint, newStatus string) error       { return nil }
 func (m *mockAdminRepo) GetBlacklistedUsers() ([]domain.BlacklistItem, error)      { return nil, nil }
 func (m *mockAdminRepo) ForceExitActivity(activityID uint) error                    { return nil }
 func (m *mockAdminRepo) RemovePenalty(userID uint) error                            { return nil }

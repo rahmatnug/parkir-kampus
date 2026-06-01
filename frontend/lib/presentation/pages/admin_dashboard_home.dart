@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../data/services/admin_service.dart';
 import 'aktivitas_parkir_page.dart';
@@ -22,26 +23,37 @@ class _AdminDashboardHomeState extends State<AdminDashboardHome> {
   bool _isLoading = true;
   Map<String, dynamic> _stats = {};
   List<dynamic> _activities = [];
+  Timer? _pollingTimer;
 
   @override
   void initState() {
     super.initState();
     _fetchStats();
+    // Poll data every 10 seconds for real-time reactivity
+    _pollingTimer = Timer.periodic(const Duration(seconds: 10), (_) {
+      _fetchStats(silent: true);
+    });
   }
 
-  Future<void> _fetchStats() async {
+  @override
+  void dispose() {
+    _pollingTimer?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _fetchStats({bool silent = false}) async {
     try {
       final stats = await _adminService.getDashboardStats();
       final acts  = await _adminService.getActivities();
       if (mounted) {
         setState(() {
-        _stats      = stats;
-        _activities = acts;
-        _isLoading  = false;
-      });
+          _stats      = stats;
+          _activities = acts;
+          if (!silent) _isLoading = false;
+        });
       }
     } catch (e) {
-      if (mounted) setState(() => _isLoading = false);
+      if (mounted && !silent) setState(() => _isLoading = false);
     }
   }
 

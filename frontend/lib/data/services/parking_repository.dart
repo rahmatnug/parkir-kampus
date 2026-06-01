@@ -33,4 +33,15 @@ class ParkingRepository {
       return false;
     }
   }
+
+  Future<bool> registerNotification(String zones) async {
+    try {
+      await _apiClient.dio.post('/api/v1/parking/notify', data: {
+        'zones': zones,
+      });
+      return true;
+    } catch (e) {
+      throw Exception("Gagal mendaftar notifikasi");
+    }
+  }
 }
