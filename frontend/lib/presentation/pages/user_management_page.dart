@@ -140,11 +140,15 @@ class _UserManagementPageState extends State<UserManagementPage> {
     String selectedRole = (user['role'] ?? 'mahasiswa').toString().toLowerCase();
     // Sanitize if not in list
     if (!_kRoles.contains(selectedRole)) selectedRole = 'mahasiswa';
+    
+    bool isBlacklisted = user['status'] == 'blacklisted';
 
-    final result = await showDialog<String>(
+    final result = await showDialog<Map<String, dynamic>>(
       context: context,
       builder: (ctx) {
         String localRole = selectedRole;
+        bool localBlacklisted = isBlacklisted;
+        
         return StatefulBuilder(
           builder: (ctx, setLocal) => AlertDialog(
             backgroundColor: Colors.white,
@@ -162,7 +166,7 @@ class _UserManagementPageState extends State<UserManagementPage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('Edit User Role', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: _kText)),
+                      const Text('Edit User', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: _kText)),
                       Text(user['name'] ?? '', style: const TextStyle(fontSize: 11, color: _kMuted)),
                     ],
                   ),
@@ -201,6 +205,44 @@ class _UserManagementPageState extends State<UserManagementPage> {
                       ),
                     ),
                   ),
+                  const SizedBox(height: 20),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    decoration: BoxDecoration(
+                      color: localBlacklisted ? const Color(0xFFFEF2F2) : Colors.white,
+                      border: Border.all(color: localBlacklisted ? const Color(0xFFFECACA) : _kBorder),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Blacklisted',
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold,
+                                color: localBlacklisted ? _kRed : _kText,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              'Blokir akses masuk',
+                              style: TextStyle(fontSize: 11, color: localBlacklisted ? _kRed.withValues(alpha: 0.8) : _kMuted),
+                            ),
+                          ],
+                        ),
+                        Switch(
+                          value: localBlacklisted,
+                          activeColor: _kRed,
+                          activeTrackColor: _kRed.withValues(alpha: 0.2),
+                          onChanged: (val) => setLocal(() => localBlacklisted = val),
+                        ),
+                      ],
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -214,7 +256,7 @@ class _UserManagementPageState extends State<UserManagementPage> {
                   backgroundColor: _kBlue, foregroundColor: Colors.white,
                   elevation: 0, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                 ),
-                onPressed: () => Navigator.pop(ctx, localRole),
+                onPressed: () => Navigator.pop(ctx, {'role': localRole, 'blacklisted': localBlacklisted}),
                 child: const Text('Simpan'),
               ),
             ],
@@ -223,14 +265,30 @@ class _UserManagementPageState extends State<UserManagementPage> {
       },
     );
 
-    if (result == null || result == selectedRole) return;
+    if (result == null) return;
+    
+    final newRole = result['role'] as String;
+    final newBlacklisted = result['blacklisted'] as bool;
+    
+    bool changed = false;
 
     try {
-      await _adminService.updateUserRole(user['id'] as int, result);
+      if (newRole != selectedRole) {
+        await _adminService.updateUserRole(user['id'] as int, newRole);
+        changed = true;
+      }
+      
+      if (newBlacklisted != isBlacklisted) {
+        await _adminService.updateUserStatus(user['id'] as int, newBlacklisted ? 'blacklisted' : 'active');
+        changed = true;
+      }
+
+      if (!changed) return;
+
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Role "${user['name']}" diubah ke ${result[0].toUpperCase()}${result.substring(1)}'),
+        const SnackBar(
+          content: Text('Perubahan data user berhasil disimpan'),
           backgroundColor: _kGreen,
           behavior: SnackBarBehavior.floating,
         ),
@@ -240,7 +298,7 @@ class _UserManagementPageState extends State<UserManagementPage> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Gagal mengubah role: $e'),
+          content: Text('Gagal menyimpan perubahan: $e'),
           backgroundColor: _kRed,
           behavior: SnackBarBehavior.floating,
         ),

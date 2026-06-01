@@ -115,6 +115,28 @@ class AdminService {
     }
   }
 
+  // ─── PUT: Update user status ──────────────────────────────────────────────
+  Future<void> updateUserStatus(int userId, String newStatus) async {
+    try {
+      final token = await _getToken();
+      final response = await http.put(
+        Uri.parse('$_baseUrl/admin/users/$userId/status'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({'status': newStatus}),
+      ).timeout(const Duration(seconds: 10));
+
+      if (response.statusCode != 200) {
+        final body = jsonDecode(response.body);
+        throw Exception(body['message'] ?? 'Gagal mengubah status');
+      }
+    } catch (e) {
+      throw Exception('Gagal mengubah status: $e');
+    }
+  }
+
   // ─── GET: Blacklisted users (poin > 50) ───────────────────────────────────
   Future<List<dynamic>> getBlacklist() async {
     try {

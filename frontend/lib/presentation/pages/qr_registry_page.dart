@@ -8,7 +8,8 @@ const _kBg      = Color(0xFFF4F5F7);
 const _kBorder  = Color(0xFFE8EAF0);
 const _kText    = Color(0xFF0F172A);
 const _kMuted   = Color(0xFF64748B);
-const _kGreen   = Color(0xFF16A34A);
+const _kGreen   = Color(0xFF15803D); // Hijau gelap
+const _kLightGray = Color(0xFFF1F5F9);
 
 class QrRegistryPage extends StatefulWidget {
   const QrRegistryPage({super.key});
@@ -21,6 +22,9 @@ class _QrRegistryPageState extends State<QrRegistryPage> {
   final AdminService _adminService = AdminService();
   List<Map<String, String>> _zones = [];
   bool _isLoading = true;
+
+  String _selectedZone = 'All Zones';
+  String _selectedStatus = 'Status: All';
 
   @override
   void initState() {
@@ -51,7 +55,7 @@ class _QrRegistryPageState extends State<QrRegistryPage> {
     }
   }
 
-  Future<void> _submitNewQr(String name) async {
+  Future<void> _submitNewQr(String name, String location) async {
     setState(() => _isLoading = true);
     try {
       await _adminService.generateQrCode(name);
@@ -81,6 +85,7 @@ class _QrRegistryPageState extends State<QrRegistryPage> {
     
     showDialog(
       context: context,
+      barrierColor: Colors.black54, // Latar belakang diredupkan
       builder: (context) {
         return Dialog(
           backgroundColor: Colors.white,
@@ -97,16 +102,18 @@ class _QrRegistryPageState extends State<QrRegistryPage> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('Generate New QR Code', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: _kText)),
-                        SizedBox(height: 6),
-                        Text('Configure parameters for the new access zone.', style: TextStyle(fontSize: 13, color: _kMuted)),
-                      ],
+                    const Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Generate New QR Code', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.black)),
+                          SizedBox(height: 6),
+                          Text('Configure parameters for the new access zone.', style: TextStyle(fontSize: 13, color: _kMuted)),
+                        ],
+                      ),
                     ),
                     IconButton(
-                      icon: const Icon(Icons.close_rounded, color: _kMuted, size: 20),
+                      icon: const Icon(Icons.close, color: Colors.black54, size: 24, weight: 300), // Ikon silang (X) tipis
                       onPressed: () => Navigator.pop(context),
                       padding: EdgeInsets.zero,
                       constraints: const BoxConstraints(),
@@ -124,7 +131,7 @@ class _QrRegistryPageState extends State<QrRegistryPage> {
                     hintText: 'e.g., Zona D',
                     hintStyle: const TextStyle(color: _kMuted, fontSize: 13),
                     filled: true,
-                    fillColor: const Color(0xFFF1F5F9),
+                    fillColor: _kLightGray,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(8),
                       borderSide: BorderSide.none,
@@ -143,7 +150,7 @@ class _QrRegistryPageState extends State<QrRegistryPage> {
                     hintText: 'e.g., Gedung Rektorat Lt. 1',
                     hintStyle: const TextStyle(color: _kMuted, fontSize: 13),
                     filled: true,
-                    fillColor: const Color(0xFFF1F5F9),
+                    fillColor: _kLightGray,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(8),
                       borderSide: BorderSide.none,
@@ -160,7 +167,7 @@ class _QrRegistryPageState extends State<QrRegistryPage> {
                     TextButton(
                       onPressed: () => Navigator.pop(context),
                       style: TextButton.styleFrom(
-                        foregroundColor: _kText,
+                        foregroundColor: Colors.black, // Teks hitam "Batal"
                         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
                       ),
                       child: const Text('Batal', style: TextStyle(fontWeight: FontWeight.w600)),
@@ -170,11 +177,11 @@ class _QrRegistryPageState extends State<QrRegistryPage> {
                       onPressed: () {
                         if (nameController.text.trim().isNotEmpty) {
                           Navigator.pop(context);
-                          _submitNewQr(nameController.text.trim());
+                          _submitNewQr(nameController.text.trim(), locController.text.trim());
                         }
                       },
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: _kBlue,
+                        backgroundColor: _kBlue, // Biru tua
                         foregroundColor: Colors.white,
                         elevation: 0,
                         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
@@ -213,10 +220,8 @@ class _QrRegistryPageState extends State<QrRegistryPage> {
                     Text('Manage access points and payment routing codes.', style: TextStyle(fontSize: 13, color: _kMuted)),
                   ],
                 ),
-                ElevatedButton.icon(
+                ElevatedButton(
                   onPressed: _showGenerateModal,
-                  icon: const Icon(Icons.add_rounded, size: 18),
-                  label: const Text('Generate New QR Code'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: _kBlue,
                     foregroundColor: Colors.white,
@@ -224,6 +229,7 @@ class _QrRegistryPageState extends State<QrRegistryPage> {
                     padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                   ),
+                  child: const Text('+ Generate New QR Code', style: TextStyle(fontWeight: FontWeight.w600)),
                 ),
               ],
             ),
@@ -237,7 +243,7 @@ class _QrRegistryPageState extends State<QrRegistryPage> {
                     height: 44,
                     padding: const EdgeInsets.symmetric(horizontal: 16),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFF1F5F9), // very light gray
+                      color: _kLightGray,
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: const Row(
@@ -261,9 +267,17 @@ class _QrRegistryPageState extends State<QrRegistryPage> {
                   ),
                 ),
                 const SizedBox(width: 16),
-                _buildDropdown('All Zones'),
+                _buildDropdownFilter(
+                  value: _selectedZone,
+                  items: ['All Zones', 'Zona A', 'Zona B', 'Zona C', 'Zona D'],
+                  onChanged: (val) => setState(() => _selectedZone = val!),
+                ),
                 const SizedBox(width: 12),
-                _buildDropdown('Status: All'),
+                _buildDropdownFilter(
+                  value: _selectedStatus,
+                  items: ['Status: All', 'Active', 'Inactive'],
+                  onChanged: (val) => setState(() => _selectedStatus = val!),
+                ),
               ],
             ),
             const SizedBox(height: 32),
@@ -279,6 +293,7 @@ class _QrRegistryPageState extends State<QrRegistryPage> {
                   return const Center(child: Text('Belum ada QR Code.', style: TextStyle(color: _kMuted)));
                 }
 
+                // Grid 3 Kolom
                 final isMobile = constraints.maxWidth <= 600;
                 final crossAxisCount = isMobile ? 1 : (constraints.maxWidth > 900 ? 3 : 2);
 
@@ -289,7 +304,7 @@ class _QrRegistryPageState extends State<QrRegistryPage> {
                     crossAxisCount: crossAxisCount,
                     crossAxisSpacing: 24,
                     mainAxisSpacing: 24,
-                    childAspectRatio: 0.95, // adjusted to fit content nicely
+                    childAspectRatio: 0.9, 
                   ),
                   itemCount: _zones.length,
                   itemBuilder: (context, index) {
@@ -304,21 +319,36 @@ class _QrRegistryPageState extends State<QrRegistryPage> {
     );
   }
 
-  Widget _buildDropdown(String text) {
+  Widget _buildDropdownFilter({
+    required String value,
+    required List<String> items,
+    required ValueChanged<String?> onChanged,
+  }) {
     return Container(
       height: 44,
       padding: const EdgeInsets.symmetric(horizontal: 16),
       decoration: BoxDecoration(
-        color: const Color(0xFFF1F5F9),
+        color: _kLightGray,
         borderRadius: BorderRadius.circular(8),
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(text, style: const TextStyle(color: _kText, fontSize: 13, fontWeight: FontWeight.w500)),
-          const SizedBox(width: 16),
-          const Icon(Icons.keyboard_arrow_down_rounded, color: _kMuted, size: 18),
-        ],
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<String>(
+          value: value,
+          icon: const Icon(Icons.keyboard_arrow_down_rounded, color: _kMuted, size: 18),
+          style: const TextStyle(color: _kText, fontSize: 13, fontWeight: FontWeight.w500),
+          dropdownColor: Colors.white,
+          borderRadius: BorderRadius.circular(8),
+          onChanged: onChanged,
+          items: items.map<DropdownMenuItem<String>>((String item) {
+            return DropdownMenuItem<String>(
+              value: item,
+              child: Padding(
+                padding: const EdgeInsets.only(right: 16.0),
+                child: Text(item),
+              ),
+            );
+          }).toList(),
+        ),
       ),
     );
   }
@@ -328,16 +358,8 @@ class _QrRegistryPageState extends State<QrRegistryPage> {
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        // Use a very subtle shadow or pure flat border based on design
-        border: Border.all(color: _kBorder),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x05000000),
-            blurRadius: 10,
-            offset: Offset(0, 4),
-          )
-        ],
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: _kBorder, width: 2), // Kotak kartu putih tebal
       ),
       child: Column(
         children: [
@@ -345,10 +367,10 @@ class _QrRegistryPageState extends State<QrRegistryPage> {
           Align(
             alignment: Alignment.topLeft,
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
-                color: _kGreen, // Solid green
-                borderRadius: BorderRadius.circular(12),
+                color: _kGreen, // Hijau gelap
+                borderRadius: BorderRadius.circular(999), // Pil bundar
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
@@ -359,7 +381,10 @@ class _QrRegistryPageState extends State<QrRegistryPage> {
                     decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
                   ),
                   const SizedBox(width: 6),
-                  const Text('ACTIVE', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white, letterSpacing: 0.5)),
+                  const Text(
+                    'ACTIVE', 
+                    style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white, letterSpacing: 0.5)
+                  ),
                 ],
               ),
             ),
@@ -367,8 +392,8 @@ class _QrRegistryPageState extends State<QrRegistryPage> {
           const Spacer(),
           // QR Image (Dynamic)
           Container(
-            width: 130,
-            height: 130,
+            width: 140,
+            height: 140,
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
               color: const Color(0xFFF8FAFC),
@@ -378,28 +403,28 @@ class _QrRegistryPageState extends State<QrRegistryPage> {
             child: QrImageView(
               data: zone['id']!,
               version: QrVersions.auto,
-              size: 110.0,
+              size: 120.0,
               backgroundColor: Colors.transparent,
             ),
           ),
           const SizedBox(height: 16),
           // Zone info
-          Text(zone['name']!, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: _kText)),
+          Text(zone['name']!, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: _kText)), // Teks sentral tebal
           const SizedBox(height: 4),
-          Text('ID: ${zone['id']}', style: const TextStyle(fontSize: 12, color: _kMuted, fontWeight: FontWeight.w500)),
+          Text('ID: ${zone['id']}', style: const TextStyle(fontSize: 13, color: _kMuted, fontWeight: FontWeight.w500)), // teks ID abu-abu kecil
           const Spacer(),
           // Actions
           Row(
             children: [
               Expanded(
                 child: SizedBox(
-                  height: 40,
+                  height: 44,
                   child: ElevatedButton.icon(
                     onPressed: () {},
-                    icon: const Icon(Icons.download_rounded, size: 16),
+                    icon: const Icon(Icons.download_rounded, size: 18),
                     label: const Text('Download', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFFF1F5F9), // Light Grey
+                      backgroundColor: _kLightGray, // Abu-abu
                       foregroundColor: _kText,
                       elevation: 0,
                       padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -410,15 +435,15 @@ class _QrRegistryPageState extends State<QrRegistryPage> {
               ),
               const SizedBox(width: 12),
               SizedBox(
-                height: 40,
-                width: 40,
+                height: 44,
+                width: 44,
                 child: Container(
                   decoration: BoxDecoration(
-                    color: const Color(0xFFF1F5F9),
+                    color: _kLightGray,
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: IconButton(
-                    icon: const Icon(Icons.edit_rounded, color: _kText, size: 16),
+                    icon: const Icon(Icons.edit_rounded, color: _kText, size: 18), // Ikon pensil edit
                     padding: EdgeInsets.zero,
                     onPressed: () {},
                   ),

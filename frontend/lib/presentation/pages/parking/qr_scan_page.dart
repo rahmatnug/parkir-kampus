@@ -256,6 +256,8 @@ class _QRScanPageState extends State<QRScanPage>
   }) {
     showModalBottomSheet(
       context: context,
+      isDismissible: false,
+      enableDrag: false,
       backgroundColor: Colors.transparent,
       builder: (ctx) => Container(
         padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 24),

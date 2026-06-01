@@ -6,6 +6,7 @@ import 'user_management_page.dart';
 import 'aktivitas_parkir_page.dart';
 import 'change_password_page.dart';
 import 'blacklist_page.dart';
+import 'qr_registry_page.dart';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const kBlue = Color(0xFF1E3FAE);
@@ -29,6 +30,7 @@ class _DashboardPageState extends State<DashboardPage> {
     UserManagementPage(),
     AktivitasParkirPage(),
     BlacklistPage(),
+    QrRegistryPage(),
   ];
 
   @override
@@ -85,8 +87,9 @@ class _Sidebar extends StatelessWidget {
   static const _items = [
     _NavItem(icon: Icons.grid_view_rounded, label: 'Dashboard'),
     _NavItem(icon: Icons.people_alt_outlined, label: 'Users'),
-    _NavItem(icon: Icons.local_parking_rounded, label: 'Aktvitas Parkir'),
+    _NavItem(icon: Icons.local_parking_rounded, label: 'Aktivitas Parkir'),
     _NavItem(icon: Icons.block_rounded, label: 'Blacklist'),
+    _NavItem(icon: Icons.qr_code_rounded, label: 'QR Registry'),
   ];
 
   @override
@@ -147,7 +150,7 @@ class _Sidebar extends StatelessWidget {
                             style: TextStyle(fontSize: 12,
                                 fontWeight: FontWeight.bold, color: kText),
                             overflow: TextOverflow.ellipsis),
-                        Text('ADMIN PORTAL',
+                        Text('ADMIN MANAGEMENT',
                             style: TextStyle(fontSize: 9, color: kMuted,
                                 letterSpacing: 0.8, fontWeight: FontWeight.w600)),
                       ],
@@ -251,10 +254,12 @@ class _SidebarItem extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
         decoration: BoxDecoration(
           color: selected ? kBlue.withValues(alpha: 0.1) : Colors.transparent,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: selected ? kBlue.withValues(alpha: 0.2) : Colors.transparent,
-          )
+          border: Border(
+            right: BorderSide(
+              color: selected ? kBlue : Colors.transparent,
+              width: 4.0,
+            ),
+          ),
         ),
         child: Row(
           children: [
