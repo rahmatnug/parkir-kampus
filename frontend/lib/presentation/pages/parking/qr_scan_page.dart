@@ -154,7 +154,7 @@ class _QRScanPageState extends State<QRScanPage>
 
       _showErrorSheet(
         title,
-        provider.scanErrorMessage ?? 'Terjadi kesalahan, silakan coba lagi.',
+        provider.errorMessage ?? 'Terjadi kesalahan, silakan coba lagi.',
         icon: errorIcon,
         iconColor: errorColor,
       );

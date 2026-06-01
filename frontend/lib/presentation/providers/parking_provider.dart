@@ -3,12 +3,21 @@ import 'dart:convert';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import '../../data/models/parking_zone.dart';
+import '../../data/models/parking_entry_result.dart';
 import '../../data/services/parking_repository.dart';
-import '../../data/services/websocket_service.dart';
+import '../../core/network/websocket_service.dart';
 import '../../core/network/api_client.dart';
 import '../../data/services/auth_service.dart';
 
-enum ScanStatus { idle, loading, success, zoneFull, error }
+enum ScanStatus {
+  idle,
+  loading,
+  success,
+  zoneFull,
+  waitlist,
+  blacklisted,
+  error,
+}
 
 class ParkingProvider extends ChangeNotifier {
   final ParkingRepository _repository = ParkingRepository();
@@ -21,13 +30,11 @@ class ParkingProvider extends ChangeNotifier {
 
   // Scan state
   ScanStatus _scanStatus = ScanStatus.idle;
-  String? _scanErrorMessage;
-  String? _scanErrorCode = null;
-  String? _assignedSlot = null;
-  String? _assignedZone = null;
-  int? _assignedTransaksiID = null;
-  double? _assignedX = null;
-  double? _assignedY = null;
+  String? _errorMessage;
+  String? _scanErrorCode;
+
+  ParkingEntryResult? _parkingResult;
+  int _waitlistRank = 0;
 
   String? _platNomor;
   String? _jenisKendaraan;
@@ -37,21 +44,25 @@ class ParkingProvider extends ChangeNotifier {
   String? get error => _error;
 
   ScanStatus get scanStatus => _scanStatus;
-  String? get scanErrorMessage => _scanErrorMessage;
+  String? get errorMessage => _errorMessage;
   String? get scanErrorCode => _scanErrorCode;
-  String? get assignedSlot => _assignedSlot;
-  String? get assignedZone => _assignedZone;
-  int? get assignedTransaksiID => _assignedTransaksiID;
-  double? get assignedX => _assignedX;
-  double? get assignedY => _assignedY;
+
+  ParkingEntryResult? get parkingResult => _parkingResult;
+  int get waitlistRank => _waitlistRank;
+
+  String? get assignedSlot => _parkingResult?.nomorSlot;
+  String? get assignedZone => _parkingResult?.namaZona;
+  int? get assignedTransaksiID => _parkingResult?.transaksiId;
+  double? get assignedX => _parkingResult?.xCoord;
+  double? get assignedY => _parkingResult?.yCoord;
   String? get platNomor => _platNomor;
   String? get jenisKendaraan => _jenisKendaraan;
 
   /// True only when a scan has been confirmed AND slot data is populated
   bool get hasActiveSession =>
       _scanStatus == ScanStatus.success &&
-      _assignedSlot != null &&
-      _assignedZone != null;
+      _parkingResult != null &&
+      _parkingResult!.nomorSlot.isNotEmpty;
 
   StreamSubscription? _wsSubscription;
   String? _currentToken;
@@ -69,30 +80,15 @@ class ParkingProvider extends ChangeNotifier {
     try {
       final response = await _apiClient.dio.get('/api/v1/parking/current');
       if (response.statusCode == 200 && response.data['data'] != null) {
-        final data = response.data['data'];
-        _assignedSlot = data['nomor_slot'];
-        _assignedZone = data['nama_zona'];
-        _assignedTransaksiID = data['id_transaksi'];
-        _assignedX = (data['x_coord'] as num?)?.toDouble() ?? 0.0;
-        _assignedY = (data['y_coord'] as num?)?.toDouble() ?? 0.0;
+        _parkingResult = ParkingEntryResult.fromJson(response.data['data']);
         _scanStatus = ScanStatus.success;
       } else {
-        // No active session — clear any stale dummy data
-        _assignedSlot = null;
-        _assignedZone = null;
-        _assignedTransaksiID = null;
-        _assignedX = null;
-        _assignedY = null;
+        _parkingResult = null;
         if (_scanStatus == ScanStatus.success) _scanStatus = ScanStatus.idle;
       }
       notifyListeners();
     } catch (e) {
-      // On error (e.g. 404 no active session), clear stale state
-      _assignedSlot = null;
-      _assignedZone = null;
-      _assignedTransaksiID = null;
-      _assignedX = null;
-      _assignedY = null;
+      _parkingResult = null;
       if (_scanStatus == ScanStatus.success) _scanStatus = ScanStatus.idle;
       notifyListeners();
     }
@@ -132,23 +128,26 @@ class ParkingProvider extends ChangeNotifier {
     return false;
   }
 
-  /// Process a QR code scan by calling POST /api/v1/parking/scan
-  Future<void> scanQR(String qrCode) async {
+  /// Process a QR code scan and waitlist assignment
+  Future<void> submitParkingEntry(String qrCode) async {
+    _isLoading = true;
     _scanStatus = ScanStatus.loading;
-    _scanErrorMessage = null;
+    _errorMessage = null;
     _scanErrorCode = null;
-    _assignedSlot = null;
-    _assignedZone = null;
-    _assignedX = null;
-    _assignedY = null;
+    _parkingResult = null;
+    _waitlistRank = 0;
     notifyListeners();
 
     // Guard 1: Check vehicle data
     await checkVehicleData();
-    if (_platNomor == null || _jenisKendaraan == null || _platNomor!.isEmpty || _jenisKendaraan!.isEmpty) {
+    if (_platNomor == null ||
+        _jenisKendaraan == null ||
+        _platNomor!.isEmpty ||
+        _jenisKendaraan!.isEmpty) {
       _scanStatus = ScanStatus.error;
       _scanErrorCode = 'NO_VEHICLE';
-      _scanErrorMessage = "Lengkapi profil kendaraan Anda terlebih dahulu.";
+      _errorMessage = "Lengkapi profil kendaraan Anda terlebih dahulu.";
+      _isLoading = false;
       notifyListeners();
       return;
     }
@@ -157,46 +156,58 @@ class ParkingProvider extends ChangeNotifier {
     if (await _hasActiveSession()) {
       _scanStatus = ScanStatus.error;
       _scanErrorCode = 'ALREADY_PARKED';
-      _scanErrorMessage = "Anda masih memiliki sesi parkir aktif. Silakan scan QR untuk keluar terlebih dahulu.";
+      _errorMessage =
+          "Anda masih memiliki sesi parkir aktif. Silakan scan QR untuk keluar terlebih dahulu.";
+      _isLoading = false;
       notifyListeners();
       return;
     }
 
     try {
       final response = await _apiClient.dio.post(
-        '/api/v1/parking/scan',
+        '/api/v1/parking/entry', // Using the /entry endpoint for QR validation
         data: {'qr_code': qrCode},
       );
 
       if (response.statusCode == 200) {
         final data = response.data['data'];
-        _assignedSlot = data['nomor_slot'];
-        _assignedZone = data['nama_zona'];
-        _assignedTransaksiID = data['id_transaksi'];
-        _assignedX = (data['x_coord'] as num?)?.toDouble() ?? 0.0;
-        _assignedY = (data['y_coord'] as num?)?.toDouble() ?? 0.0;
-        _scanStatus = ScanStatus.success;
+        final status = data['status'];
+
+        if (status == 'waiting_list') {
+          _scanStatus = ScanStatus.waitlist;
+          _waitlistRank = data['antrian'] ?? 0;
+          _parkingResult = ParkingEntryResult.fromJson(data);
+        } else {
+          _scanStatus = ScanStatus.success;
+          _parkingResult = ParkingEntryResult.fromJson(data);
+        }
       }
     } catch (e) {
       if (e is DioException && e.response != null) {
         final responseData = e.response!.data;
         _scanErrorCode = responseData['error_code'] ?? 'UNKNOWN';
-        _scanErrorMessage = responseData['message'] ?? 'Terjadi kesalahan';
+        _errorMessage = responseData['message'] ?? 'Terjadi kesalahan';
 
-        if (_scanErrorCode == 'ZONE_FULL') {
+        if (e.response!.statusCode == 403) {
+          _scanStatus = ScanStatus.blacklisted;
+        } else if (_scanErrorCode == 'ZONE_FULL') {
           _scanStatus = ScanStatus.zoneFull;
         } else {
           _scanStatus = ScanStatus.error;
         }
       } else {
         _scanErrorCode = 'NETWORK_ERROR';
-        _scanErrorMessage = 'Gagal terhubung ke server';
+        _errorMessage = 'Gagal terhubung ke server';
         _scanStatus = ScanStatus.error;
       }
     }
 
+    _isLoading = false;
     notifyListeners();
   }
+
+  // Fallback if legacy UI components call scanQR
+  Future<void> scanQR(String qrCode) => submitParkingEntry(qrCode);
 
   /// Process parking exit by calling POST /api/v1/parking/exit
   Future<Map<String, dynamic>> exitParking() async {
@@ -206,7 +217,7 @@ class ParkingProvider extends ChangeNotifier {
 
     try {
       final response = await _apiClient.dio.post('/api/v1/parking/exit');
-      
+
       if (response.statusCode == 200) {
         final data = response.data['data'];
         // Clear local active transaction state so user can scan again
@@ -230,13 +241,10 @@ class ParkingProvider extends ChangeNotifier {
   /// Reset scan state (e.g., when user re-opens scanner)
   void resetScanState() {
     _scanStatus = ScanStatus.idle;
-    _scanErrorMessage = null;
+    _errorMessage = null;
     _scanErrorCode = null;
-    _assignedSlot = null;
-    _assignedZone = null;
-    _assignedTransaksiID = null;
-    _assignedX = null;
-    _assignedY = null;
+    _parkingResult = null;
+    _waitlistRank = 0;
     notifyListeners();
   }
 
@@ -251,11 +259,11 @@ class ParkingProvider extends ChangeNotifier {
 
     _wsService.connect(_currentToken!);
 
-    _wsSubscription = _wsService.stream?.listen(
+    _wsSubscription = _wsService.stream.listen(
       (message) {
         // Reset delay on successful message received (indicates connection is healthy)
         _wsReconnectDelay = 2;
-        
+
         try {
           final data = jsonDecode(message);
           if (data['event'] == 'SLOT_UPDATE') {
@@ -265,13 +273,11 @@ class ParkingProvider extends ChangeNotifier {
               final tersedia = payload['tersedia'] as int;
               final kapasitas = payload['kapasitas'] as int;
               final terisi = kapasitas - tersedia;
-              
+
               // Temukan zona dan update state secara lokal
               final index = _zones.indexWhere((z) => z.id == idZona);
               if (index != -1) {
-                _zones[index] = _zones[index].copyWith(
-                  terisiSaatIni: terisi,
-                );
+                _zones[index] = _zones[index].copyWith(terisiSaatIni: terisi);
                 notifyListeners();
               } else {
                 fetchParkingStatus();
@@ -298,9 +304,20 @@ class ParkingProvider extends ChangeNotifier {
                 builder: (ctx) => AlertDialog(
                   backgroundColor: Colors.white,
                   surfaceTintColor: Colors.transparent,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                  title: const Text("Peringatan Sistem", style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold)),
-                  content: Text(data['data']?['message'] ?? 'Perhatian sistem', style: const TextStyle(color: Colors.black87)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  title: const Text(
+                    "Peringatan Sistem",
+                    style: TextStyle(
+                      color: Colors.black87,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  content: Text(
+                    data['data']?['message'] ?? 'Perhatian sistem',
+                    style: const TextStyle(color: Colors.black87),
+                  ),
                   actions: [
                     TextButton(
                       onPressed: () => Navigator.pop(ctx),
@@ -324,7 +341,7 @@ class ParkingProvider extends ChangeNotifier {
           _connectWs();
           fetchParkingStatus();
         });
-        
+
         // Exponential backoff logic
         _wsReconnectDelay = (_wsReconnectDelay * 2).clamp(2, 32);
       },
