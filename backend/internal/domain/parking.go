@@ -1,16 +1,20 @@
 package domain
 
-import "time"
+import (
+	"time"
+	"gorm.io/gorm"
+)
 
 // Kendaraan represents the vehicle entity
 type Kendaraan struct {
 	IDKendaraan    uint      `json:"id_kendaraan" gorm:"primaryKey;column:id_kendaraan;autoIncrement"`
 	UserID         uint      `json:"id_user" gorm:"column:id_user;type:bigint"`
 	User           User      `json:"-" gorm:"foreignKey:UserID;references:ID"`
-	NomorPolisi    string    `json:"nomor_polisi" gorm:"unique;not null;type:varchar(15)"`
-	JenisKendaraan string    `json:"jenis_kendaraan" gorm:"type:varchar(20);check:jenis_kendaraan IN ('motor','mobil')"`
-	Warna          string    `json:"warna" gorm:"type:varchar(30)"`
-	CreatedAt      time.Time `json:"created_at" gorm:"autoCreateTime"`
+	NomorPolisi    string         `json:"nomor_polisi" gorm:"unique;not null;type:varchar(15)"`
+	JenisKendaraan string         `json:"jenis_kendaraan" gorm:"type:varchar(20);check:jenis_kendaraan IN ('motor','mobil')"`
+	Warna          string         `json:"warna" gorm:"type:varchar(30)"`
+	CreatedAt      time.Time      `json:"created_at" gorm:"autoCreateTime"`
+	DeletedAt      gorm.DeletedAt `json:"-" gorm:"index"`
 }
 
 // ZonaParkir represents the parking zone
@@ -18,8 +22,8 @@ type ZonaParkir struct {
 	IDZona         uint   `json:"id_zona" gorm:"primaryKey;column:id_zona;autoIncrement"`
 	NamaZona       string `json:"nama_zona" gorm:"not null;type:varchar(50)"`
 	Deskripsi      string `json:"deskripsi" gorm:"type:text"`
-	Kapasitas      int    `json:"kapasitas" gorm:"not null;type:integer"`
-	JenisKendaraan string `json:"jenis_kendaraan" gorm:"type:varchar(20);default:'motor';check:jenis_kendaraan IN ('motor','mobil')"`
+	KapasitasMotor int    `json:"kapasitas_motor" gorm:"column:kapasitas_motor;not null;type:integer;default:0"`
+	KapasitasMobil int    `json:"kapasitas_mobil" gorm:"column:kapasitas_mobil;not null;type:integer;default:0"`
 	Status         string `json:"status" gorm:"type:varchar(20);default:'active'"`
 }
 
@@ -105,6 +109,7 @@ type ParkingRepository interface {
 	ReleaseSlotAndUpdateTransaction(userID uint) (*Transaksi, error)
 	GetAllZonesPublic() ([]ZonaParkir, error)
 	GetSlotsByZone(zonaID uint) ([]SlotParkir, error)
+	GetOccupancyByVehicleType(zonaID uint) (motor int, mobil int, err error)
 	GetUserHistory(userID uint) ([]Transaksi, error)
 	GetUserAlerts(userID uint) ([]Penalti, error)
 }
@@ -121,11 +126,12 @@ type ParkingEntryResult struct {
 
 // ZoneStatus holds public occupancy info for a parking zone (used on the user dashboard)
 type ZoneStatus struct {
-	ID             uint    `json:"id"`
-	Nama           string  `json:"nama"`
-	KapasitasMaks  int     `json:"kapasitas_maksimal"`
-	Terisi         int     `json:"terisi_saat_ini"`
-	JenisKendaraan string  `json:"jenis_kendaraan"`
+	ID             uint    `json:"id_zona"`
+	Nama           string  `json:"nama_zona"`
+	KapasitasMotor int     `json:"kapasitas_motor"`
+	KapasitasMobil int     `json:"kapasitas_mobil"`
+	TerpakaiMotor  int     `json:"terpakai_motor"`
+	TerpakaiMobil  int     `json:"terpakai_mobil"`
 	XCoord         float64 `json:"x_coord"`
 	YCoord         float64 `json:"y_coord"`
 }

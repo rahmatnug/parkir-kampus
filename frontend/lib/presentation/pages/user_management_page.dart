@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../data/services/admin_service.dart';
+import 'admin_edit_user_page.dart';
 
 const _kBlue    = Color(0xFF1E3FAE);
 const _kBg      = Color(0xFFF4F5F7);
@@ -141,7 +142,7 @@ class _UserManagementPageState extends State<UserManagementPage> {
     // Sanitize if not in list
     if (!_kRoles.contains(selectedRole)) selectedRole = 'mahasiswa';
     
-    bool isBlacklisted = user['status'] == 'blacklisted';
+    bool isBlacklisted = user['status'] == 'blocked' || user['status'] == 'blacklisted';
 
     final result = await showDialog<Map<String, dynamic>>(
       context: context,
@@ -279,7 +280,7 @@ class _UserManagementPageState extends State<UserManagementPage> {
       }
       
       if (newBlacklisted != isBlacklisted) {
-        await _adminService.updateUserStatus(user['id'] as int, newBlacklisted ? 'blacklisted' : 'active');
+        await _adminService.updateUserStatus(user['id'] as int, newBlacklisted ? 'blocked' : 'active');
         changed = true;
       }
 
@@ -316,7 +317,7 @@ class _UserManagementPageState extends State<UserManagementPage> {
     }
 
     final activeCount      = _users.where((u) => u['status'] == 'active').length;
-    final blacklistedCount = _users.where((u) => u['status'] == 'blacklisted').length;
+    final blacklistedCount = _users.where((u) => u['status'] == 'blocked' || u['status'] == 'blacklisted').length;
 
     return Scaffold(
       backgroundColor: _kBg,
@@ -449,7 +450,10 @@ class _UserManagementPageState extends State<UserManagementPage> {
                             itemCount: _paginatedFiltered.length,
                             itemBuilder: (ctx, i) => _UserRow(
                               user: _paginatedFiltered[i],
-                              onEdit:   () => _showEditDialog(_paginatedFiltered[i]),
+                              onEdit:   () async {
+                                final res = await Navigator.push(context, MaterialPageRoute(builder: (_) => AdminEditUserPage(user: _paginatedFiltered[i])));
+                                if (res == true) _fetchUsers();
+                              },
                               onDelete: () => _confirmDelete(_paginatedFiltered[i]),
                             ),
                           ),
@@ -652,7 +656,7 @@ class _UserRowState extends State<_UserRow> {
     String role        = user['role']   ?? 'mahasiswa';
     if (role.isNotEmpty) role = role[0].toUpperCase() + role.substring(1);
 
-    final isBlacklisted = user['status'] == 'blacklisted';
+    final isBlacklisted = user['status'] == 'blocked' || user['status'] == 'blacklisted';
 
     final initial1 = name.isNotEmpty ? name[0].toUpperCase() : '?';
     final initial2 = name.length > 1 && name.split(' ').length > 1 

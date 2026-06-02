@@ -23,6 +23,7 @@ class _BlacklistPageState extends State<BlacklistPage> {
   final _adminService = AdminService();
   bool          _isLoading = true;
   List<dynamic> _items     = [];
+  Map<String, dynamic> _stats = {};
   String        _error     = '';
 
   @override
@@ -35,7 +36,12 @@ class _BlacklistPageState extends State<BlacklistPage> {
     setState(() { _isLoading = true; _error = ''; });
     try {
       final data = await _adminService.getBlacklist();
-      if (mounted) setState(() { _items = data; _isLoading = false; });
+      final stats = await _adminService.getBlacklistStats();
+      if (mounted) setState(() { 
+        _items = data; 
+        _stats = stats;
+        _isLoading = false; 
+      });
     } catch (e) {
       if (mounted) setState(() { _error = e.toString(); _isLoading = false; });
     }
@@ -225,10 +231,11 @@ class _BlacklistPageState extends State<BlacklistPage> {
                   await _adminService.addPenalty(selectedUserId!, poin, noteCtrl.text);
                   if (!ctx.mounted) return;
                   Navigator.pop(ctx);
+                  await _fetch(); // SEBELUM memunculkan notifikasi "Berhasil"
+                  if (!context.mounted) return;
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(content: Text('Restriction added'), backgroundColor: _kGreen),
                   );
-                  _fetch();
                 } catch (e) {
                   if (!ctx.mounted) return;
                   ScaffoldMessenger.of(context).showSnackBar(
@@ -297,9 +304,12 @@ class _BlacklistPageState extends State<BlacklistPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: _kBg,
-      body: SingleChildScrollView(
-        scrollDirection: Axis.vertical,
-        child: Padding(
+      body: RefreshIndicator(
+        onRefresh: _fetch,
+        color: _kBlue,
+        child: SingleChildScrollView(
+          scrollDirection: Axis.vertical,
+          child: Padding(
           padding: const EdgeInsets.all(32),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -370,7 +380,7 @@ class _BlacklistPageState extends State<BlacklistPage> {
                         ],
                       ),
                       const SizedBox(height: 8),
-                      Text('${_items.length}', style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: _kText)),
+                      Text('${_stats['total_blacklisted'] ?? 0}', style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: _kText)),
                     ],
                   ),
                 );
@@ -388,7 +398,7 @@ class _BlacklistPageState extends State<BlacklistPage> {
                         ],
                       ),
                       const SizedBox(height: 8),
-                      Text('${_items.fold<int>(0, (sum, i) => sum + ((i['jumlah_kasus'] as num?)?.toInt() ?? 0))}', style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: _kText)),
+                      Text('${_stats['active_restrictions'] ?? 0}', style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: _kText)),
                     ],
                   ),
                 );
@@ -547,6 +557,7 @@ class _BlacklistPageState extends State<BlacklistPage> {
           ],
         ),
       ),
+    ),
     ),
     );
   }

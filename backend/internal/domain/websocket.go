@@ -28,10 +28,12 @@ type WSEvent struct {
 
 // SlotUpdateData is broadcast when zone capacity changes
 type SlotUpdateData struct {
-	IDZona     uint   `json:"id_zona"`
-	NamaZona   string `json:"nama_zona"`
-	Tersedia   int    `json:"tersedia"`
-	Kapasitas  int    `json:"kapasitas"`
+	IDZona         uint   `json:"id_zona"`
+	NamaZona       string `json:"nama_zona"`
+	KapasitasMotor int    `json:"kapasitas_motor"`
+	KapasitasMobil int    `json:"kapasitas_mobil"`
+	TerpakaiMotor  int    `json:"terpakai_motor"`
+	TerpakaiMobil  int    `json:"terpakai_mobil"`
 }
 
 // QueuePopData is sent to a specific user when ZPOPMIN allocates a slot

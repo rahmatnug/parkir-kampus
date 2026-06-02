@@ -5,7 +5,7 @@ import 'package:flutter/foundation.dart';
 class WebSocketService {
   WebSocketChannel? _channel;
   bool _isConnected = false;
-  final String _baseUrl = 'ws://localhost:8080/api/parking/ws'; // API URL
+  final String _baseUrl = 'ws://localhost:8080/api/v1/ws/connect'; // API URL
   
   String? _token;
   int _reconnectDelay = 2;

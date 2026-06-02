@@ -76,7 +76,7 @@ class _UserHistoryPageState extends State<UserHistoryPage> {
                   final isDone = tx['status'] != 'parkir';
                   final tMasuk = DateTime.parse(tx['waktu_masuk']).toLocal();
                   final tKeluar = tx['waktu_keluar'] != null ? DateTime.parse(tx['waktu_keluar']).toLocal() : null;
-                  final fmt = DateFormat('dd MMM yyyy, HH:mm');
+                  final fmt = DateFormat("dd MMM yyyy, HH:mm 'WIB'");
 
                   return Container(
                     margin: const EdgeInsets.only(bottom: 12),

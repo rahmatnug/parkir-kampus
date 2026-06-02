@@ -45,44 +45,36 @@ class _UserEditProfilePageState extends State<UserEditProfilePage> {
 
   Future<void> _saveProfile() async {
     setState(() => _isLoading = true);
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+    final navigator = Navigator.of(context);
     try {
       final auth = context.read<AuthProvider>();
       final token = await auth.getToken();
       if (token == null) throw Exception('Tidak ada token');
 
-      final res = await http.put(
-        Uri.parse('${AppConfig.baseUrl}/api/user/profile'),
-        headers: {
-          'Authorization': 'Bearer $token',
-          'Content-Type': 'application/json',
-        },
-        body: jsonEncode({
-          'plat_nomor': _platCtrl.text.trim(),
-          'jenis_kendaraan': _kendaraanCtrl.text.trim(),
-        }),
-      ).timeout(const Duration(seconds: 10));
+      await _authService.updateProfile(
+        int.tryParse(auth.idKendaraan ?? '0') ?? 0,
+        _platCtrl.text.trim(),
+        _kendaraanCtrl.text.trim(),
+        '',
+      );
 
       if (!mounted) return;
 
-      if (res.statusCode == 200) {
-        // Refresh provider data
-        await auth.refreshUserData();
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Profil berhasil diperbarui!'),
-            backgroundColor: Color(0xFF16A34A),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-        Navigator.pop(context);
-      } else {
-        final body = jsonDecode(res.body);
-        throw Exception(body['message'] ?? 'Gagal memperbarui profil');
-      }
+      // Refresh provider data
+      await auth.refreshUserData();
+      if (!mounted) return;
+      scaffoldMessenger.showSnackBar(
+        const SnackBar(
+          content: Text('Profil berhasil diperbarui!'),
+          backgroundColor: Color(0xFF16A34A),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      navigator.pop();
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
+      scaffoldMessenger.showSnackBar(
         SnackBar(
           content: Text('Error: $e'),
           backgroundColor: const Color(0xFFDC2626),
@@ -167,6 +159,8 @@ class _UserEditProfilePageState extends State<UserEditProfilePage> {
   }
 
   Future<void> _pickAndUploadImage(ImageSource source) async {
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+    final auth = context.read<AuthProvider>();
     try {
       final picker = ImagePicker();
       final XFile? picked = await picker.pickImage(
@@ -180,14 +174,14 @@ class _UserEditProfilePageState extends State<UserEditProfilePage> {
 
       setState(() => _isUploadingAvatar = true);
 
-      final newUrl = await _authService.uploadAvatar(picked.path);
+      final bytes = await picked.readAsBytes();
+      final newUrl = await _authService.uploadAvatar(bytes, picked.name);
 
       // Refresh auth provider to update UI everywhere
-      if (!mounted) return;
-      await context.read<AuthProvider>().refreshUserData();
+      await auth.refreshUserData();
 
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
+      scaffoldMessenger.showSnackBar(
         const SnackBar(
           content: Text('Foto profil berhasil diperbarui! 🎉'),
           backgroundColor: Color(0xFF16A34A),
@@ -196,7 +190,7 @@ class _UserEditProfilePageState extends State<UserEditProfilePage> {
       );
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
+      scaffoldMessenger.showSnackBar(
         SnackBar(
           content: Text('Gagal mengunggah foto: $e'),
           backgroundColor: const Color(0xFFDC2626),

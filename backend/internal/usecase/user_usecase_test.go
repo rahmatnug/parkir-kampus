@@ -66,6 +66,10 @@ func (m *mockUserRepo) UpdateUserStatus(userID uint, status string) error {
 	return nil
 }
 
+func (m *mockUserRepo) UpdateKendaraan(userID uint, kendaraanID uint, nomorPolisi, jenisKendaraan, warna string) error {
+	return nil
+}
+
 // Test cases
 
 func TestRegisterMahasiswaValidEmail(t *testing.T) {

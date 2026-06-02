@@ -22,6 +22,13 @@ type User struct {
 	Status          string      `json:"status" gorm:"column:status;type:varchar(20);default:'active'"`
 	CreatedAt       time.Time   `json:"created_at" gorm:"column:created_at;autoCreateTime"`
 	Kendaraans      []Kendaraan `json:"kendaraans" gorm:"foreignKey:UserID"`
+
+	// Transient fields for /api/user/profile
+	TotalPoin          int       `json:"total_poin" gorm:"-"`
+	IsBlacklisted      bool      `json:"is_blacklisted" gorm:"-"`
+	BlacklistReason    string    `json:"blacklist_reason,omitempty" gorm:"-"`
+	BlacklistDate      string    `json:"blacklist_date,omitempty" gorm:"-"`
+	RiwayatPelanggaran []Penalti `json:"riwayat_pelanggaran" gorm:"-"`
 }
 
 // UserRepository interface defines the methods that any repository must implement
@@ -31,6 +38,7 @@ type UserRepository interface {
 	FindByID(id uint) (*User, error)
 	UpdatePassword(userID uint, newPasswordHash string) error
 	UpdateProfileImageURL(userID uint, imageURL string) error
+	UpdateKendaraan(userID uint, kendaraanID uint, nomorPolisi, jenisKendaraan, warna string) error
 }
 
 // UserUsecase interface defines the standard business logic methods
@@ -40,4 +48,5 @@ type UserUsecase interface {
 	ChangePassword(userID uint, currentPassword, newPassword string) error
 	GetProfile(userID uint) (*User, error)
 	UpdateProfileImageURL(userID uint, imageURL string) error
+	UpdateKendaraan(userID uint, kendaraanID uint, nomorPolisi, jenisKendaraan, warna string) error
 }

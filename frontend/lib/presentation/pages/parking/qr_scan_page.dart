@@ -13,8 +13,7 @@ class QRScanPage extends StatefulWidget {
   State<QRScanPage> createState() => _QRScanPageState();
 }
 
-class _QRScanPageState extends State<QRScanPage>
-    with TickerProviderStateMixin {
+class _QRScanPageState extends State<QRScanPage> with TickerProviderStateMixin {
   late MobileScannerController cameraController;
   late AnimationController _animationController;
   late AnimationController _shimmerController;
@@ -61,20 +60,24 @@ class _QRScanPageState extends State<QRScanPage>
     for (final barcode in barcodes) {
       final code = barcode.rawValue;
       if (code != null && code.isNotEmpty) {
-        // Validate the format: URL, PK-prefix, ZONE-prefix, or length > 3
-        if (code.startsWith('http') ||
-            code.startsWith('PK-') ||
+        // Accept: PK-ZONE-*, URL, ZONE/ZONA prefix, or any string > 3 chars
+        if (code.startsWith('PK-') ||
+            code.startsWith('http') ||
             code.toUpperCase().startsWith('ZONE') ||
+            code.toUpperCase().startsWith('ZONA') ||
             code.length > 3) {
           setState(() {
             isScanning = false;
             _isProcessing = true;
           });
+          // Pass the raw QR string directly without truncation
           _processScan(code);
         } else {
           setState(() => isScanning = false);
-          _showErrorSheet('Format QR tidak dikenali!',
-              'Pastikan Anda memindai kode QR yang terdapat pada tiang zona parkir.');
+          _showErrorSheet(
+            'Format QR tidak dikenali!',
+            'Pastikan Anda memindai kode QR yang terdapat pada tiang zona parkir.',
+          );
           Future.delayed(const Duration(seconds: 3), () {
             if (mounted) setState(() => isScanning = true);
           });
@@ -88,19 +91,50 @@ class _QRScanPageState extends State<QRScanPage>
     final provider = context.read<ParkingProvider>();
 
     // Show processing modal bottom sheet
+    bool isSheetOpen = true;
     _showProcessingSheet();
 
-    await provider.scanQR(qrCode);
+    try {
+      // Pass the raw QR string directly to the backend
+      await provider.submitParkingEntry(qrCode);
+    } catch (e) {
+      if (mounted) {
+        // Close any open bottom sheet first
+        if (isSheetOpen && Navigator.of(context).canPop()) {
+          Navigator.of(context).pop();
+          isSheetOpen = false;
+        }
+        _showErrorSheet(
+          'Error Sistem',
+          'Terjadi kesalahan tidak terduga: ${e.toString()}',
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isProcessing = false;
+        });
+        // Safely close the processing bottom sheet (it may already be closed)
+        try {
+          if (isSheetOpen && Navigator.of(context).canPop()) {
+            Navigator.of(context).pop();
+            isSheetOpen = false;
+          }
+        } catch (_) {}
+      }
+    }
 
     if (!mounted) return;
-
-    // Close processing sheet
-    Navigator.of(context).pop();
 
     final status = provider.scanStatus;
 
     if (status == ScanStatus.success) {
-      // Navigate to Parking Assigned page with real coordinates
+      // Refresh parking zones data after successful entry
+      await provider.fetchParkingStatus(silent: true);
+
+      if (!mounted) return;
+
+      // Navigate to Parking Assxigned page — zone confirmation UI
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
@@ -113,29 +147,39 @@ class _QRScanPageState extends State<QRScanPage>
           ),
         ),
       );
+    } else if (status == ScanStatus.waitlist) {
+      // Waitlist — show info and go back
+      _showErrorSheet(
+        'Antrian Aktif',
+        'Anda masuk waiting list zona ${provider.assignedZone ?? '-'}. Posisi antrian: ${provider.waitlistRank}.',
+        icon: Icons.hourglass_top_rounded,
+        iconColor: const Color(0xFFF59E0B),
+      );
+      Future.delayed(const Duration(seconds: 4), () {
+        if (mounted) setState(() => isScanning = true);
+      });
     } else if (status == ScanStatus.zoneFull) {
-      final availableZones = provider.zones
-          .where((z) => z.tersedia > 0 && 
-                        z.jenisKendaraan.toLowerCase() == (provider.jenisKendaraan ?? 'motor').toLowerCase())
-          .map((z) => z.nama)
-          .toList();
-
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (_) => ParkingFullPage(
-            availableZones: availableZones.isEmpty ? const ['Belum ada zona lain'] : availableZones,
-            vehicleType: provider.jenisKendaraan ?? 'Motor',
-          ),
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Kapasitas penuh! Silakan cari zona lain."),
+          backgroundColor: Colors.red,
         ),
       );
-    } else {
-      // Show error bottom sheet
+      Future.delayed(const Duration(seconds: 4), () {
+        if (mounted) setState(() => isScanning = true);
+      });
+    } else if (status == ScanStatus.error) {
+      // Show error bottom sheet with proper title per error code
       String title;
       IconData errorIcon;
       Color errorColor;
 
       switch (provider.scanErrorCode) {
+        case 'BLACKLISTED':
+          title = 'Akses Parkir Diblokir';
+          errorIcon = Icons.block_rounded;
+          errorColor = const Color(0xFFDC2626);
+          break;
         case 'NO_VEHICLE':
           title = 'Profil Kendaraan Kosong';
           errorIcon = Icons.directions_car_outlined;
@@ -160,13 +204,11 @@ class _QRScanPageState extends State<QRScanPage>
       );
 
       Future.delayed(const Duration(seconds: 3), () {
-        if (mounted) {
-          setState(() {
-            isScanning = true;
-            _isProcessing = false;
-          });
-        }
+        if (mounted) setState(() => isScanning = true);
       });
+    } else {
+      // Unknown status — always unlock scanner
+      if (mounted) setState(() => isScanning = true);
     }
   }
 
@@ -240,9 +282,17 @@ class _QRScanPageState extends State<QRScanPage>
             // Shimmer skeleton bars
             _ShimmerBar(controller: _shimmerController, width: double.infinity),
             const SizedBox(height: 12),
-            _ShimmerBar(controller: _shimmerController, width: double.infinity, delay: 0.15),
+            _ShimmerBar(
+              controller: _shimmerController,
+              width: double.infinity,
+              delay: 0.15,
+            ),
             const SizedBox(height: 12),
-            _ShimmerBar(controller: _shimmerController, width: double.infinity, delay: 0.3),
+            _ShimmerBar(
+              controller: _shimmerController,
+              width: double.infinity,
+              delay: 0.3,
+            ),
             const SizedBox(height: 16),
           ],
         ),
@@ -250,7 +300,9 @@ class _QRScanPageState extends State<QRScanPage>
     );
   }
 
-  void _showErrorSheet(String title, String message, {
+  void _showErrorSheet(
+    String title,
+    String message, {
     IconData icon = Icons.warning_amber_rounded,
     Color iconColor = const Color(0xFFEF4444),
   }) {
@@ -323,14 +375,18 @@ class _QRScanPageState extends State<QRScanPage>
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF1E70EB),
                   shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12)),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                   elevation: 0,
                 ),
-                child: const Text('Coba Lagi',
-                    style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.white)),
+                child: const Text(
+                  'Coba Lagi',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
+                  ),
+                ),
               ),
             ),
             const SizedBox(height: 12),
@@ -344,145 +400,145 @@ class _QRScanPageState extends State<QRScanPage>
   Widget build(BuildContext context) {
     return SafeArea(
       child: Scaffold(
-      backgroundColor: const Color(0xFF0A0F1E),
-      extendBodyBehindAppBar: true,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
-        title: const Text(
-          'Scan QR Parkiran',
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
+        backgroundColor: const Color(0xFF0A0F1E),
+        extendBodyBehindAppBar: true,
+        appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back, color: Colors.white),
+            onPressed: () => Navigator.of(context).pop(),
           ),
-        ),
-        centerTitle: true,
-      ),
-      body: Stack(
-        children: [
-          // Camera Preview
-          MobileScanner(
-            controller: cameraController,
-            onDetect: _onDetect,
-          ),
-
-          // Scanner Overlay with animated laser
-          CustomPaint(
-            size: Size.infinite,
-            painter: _ScannerOverlayPainter(
-              animationValue: _animationController,
+          title: const Text(
+            'Scan QR Parkiran',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
             ),
           ),
+          centerTitle: true,
+        ),
+        body: Stack(
+          children: [
+            // Camera Preview
+            MobileScanner(controller: cameraController, onDetect: _onDetect),
 
-          // Instruction text below viewfinder
-          Positioned(
-            bottom: kIsWeb ? 230 : 180,
-            left: 0,
-            right: 0,
-            child: Column(
-              children: [
-                const Text(
-                  'Scan barcode yang ada\ndi zona parkir',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    height: 1.4,
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          if (kIsWeb)
-            Positioned(
-              bottom: 160,
-              left: 40,
-              right: 40,
-              child: ElevatedButton.icon(
-                onPressed: _isProcessing
-                    ? null
-                    : () => _processScan('Zone A'),
-                icon: _isProcessing
-                    ? const SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Colors.white,
-                        ),
-                      )
-                    : const Icon(Icons.bug_report_rounded),
-                label: Text(_isProcessing
-                    ? 'Memproses...'
-                    : 'Simulasi Bypass Scan (Debug)'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: _isProcessing
-                      ? const Color(0xFFD97706)
-                      : const Color(0xFFF59E0B),
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14)),
-                  elevation: 0,
-                ),
+            // Scanner Overlay with animated laser
+            CustomPaint(
+              size: Size.infinite,
+              painter: _ScannerOverlayPainter(
+                animationValue: _animationController,
               ),
             ),
 
-          // Bottom Controls
-          Positioned(
-            bottom: 60,
-            left: 32,
-            right: 32,
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                // Flash Toggle
-                Positioned(
-                  left: 0,
-                  child: _buildControlButton(
-                    size: 56,
-                    child: ValueListenableBuilder<MobileScannerState>(
-                      valueListenable: cameraController,
-                      builder: (context, state, child) {
-                        final isOn = state.torchState == TorchState.on;
-                        return Icon(
-                          isOn
-                              ? Icons.flashlight_on_rounded
-                              : Icons.flashlight_off_rounded,
-                          color: isOn ? Colors.amber : Colors.white,
-                          size: 24,
-                        );
-                      },
+            // Instruction text below viewfinder
+            Positioned(
+              bottom: kIsWeb ? 230 : 180,
+              left: 0,
+              right: 0,
+              child: Column(
+                children: [
+                  const Text(
+                    'Scan barcode yang ada\ndi zona parkir',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      height: 1.4,
                     ),
-                    onTap: () => cameraController.toggleTorch(),
-                    isAccent: false,
                   ),
-                ),
-
-                // Switch Camera (primary action)
-                _buildControlButton(
-                  size: 72,
-                  child: const Icon(
-                    Icons.cameraswitch_rounded,
-                    color: Colors.white,
-                    size: 32,
-                  ),
-                  onTap: () => cameraController.switchCamera(),
-                  isAccent: true,
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-        ],
+
+            if (kIsWeb)
+              Positioned(
+                bottom: 160,
+                left: 40,
+                right: 40,
+                child: ElevatedButton.icon(
+                  onPressed: _isProcessing
+                      ? null
+                      : () => _processScan('PK-ZONE-1'),
+                  icon: _isProcessing
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : const Icon(Icons.bug_report_rounded),
+                  label: Text(
+                    _isProcessing
+                        ? 'Memproses...'
+                        : 'Simulasi Bypass Scan (Debug)',
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: _isProcessing
+                        ? const Color(0xFFD97706)
+                        : const Color(0xFFF59E0B),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    elevation: 0,
+                  ),
+                ),
+              ),
+
+            // Bottom Controls
+            Positioned(
+              bottom: 60,
+              left: 32,
+              right: 32,
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  // Flash Toggle
+                  Positioned(
+                    left: 0,
+                    child: _buildControlButton(
+                      size: 56,
+                      child: ValueListenableBuilder<MobileScannerState>(
+                        valueListenable: cameraController,
+                        builder: (context, state, child) {
+                          final isOn = state.torchState == TorchState.on;
+                          return Icon(
+                            isOn
+                                ? Icons.flashlight_on_rounded
+                                : Icons.flashlight_off_rounded,
+                            color: isOn ? Colors.amber : Colors.white,
+                            size: 24,
+                          );
+                        },
+                      ),
+                      onTap: () => cameraController.toggleTorch(),
+                      isAccent: false,
+                    ),
+                  ),
+
+                  // Switch Camera (primary action)
+                  _buildControlButton(
+                    size: 72,
+                    child: const Icon(
+                      Icons.cameraswitch_rounded,
+                      color: Colors.white,
+                      size: 32,
+                    ),
+                    onTap: () => cameraController.switchCamera(),
+                    isAccent: true,
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
-    ),
     );
   }
 
@@ -590,7 +646,7 @@ class _ScannerOverlayPainter extends CustomPainter {
   final Animation<double> animationValue;
 
   _ScannerOverlayPainter({required this.animationValue})
-      : super(repaint: animationValue);
+    : super(repaint: animationValue);
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -601,15 +657,22 @@ class _ScannerOverlayPainter extends CustomPainter {
     final scanRectSize = width * 0.68;
     final scanRectLeft = (width - scanRectSize) / 2;
     final scanRectTop = (height - scanRectSize) / 2 - 60;
-    final scanRect =
-        Rect.fromLTWH(scanRectLeft, scanRectTop, scanRectSize, scanRectSize);
+    final scanRect = Rect.fromLTWH(
+      scanRectLeft,
+      scanRectTop,
+      scanRectSize,
+      scanRectSize,
+    );
     final cornerRadius = 20.0;
 
     // 1. Draw the dark overlay mask
-    final maskPaint = Paint()..color = const Color(0xFF0A0F1E).withValues(alpha: 0.82);
+    final maskPaint = Paint()
+      ..color = const Color(0xFF0A0F1E).withValues(alpha: 0.82);
     final path = Path()
       ..addRect(Rect.fromLTWH(0, 0, width, height))
-      ..addRRect(RRect.fromRectAndRadius(scanRect, Radius.circular(cornerRadius)))
+      ..addRRect(
+        RRect.fromRectAndRadius(scanRect, Radius.circular(cornerRadius)),
+      )
       ..fillType = PathFillType.evenOdd;
 
     canvas.drawPath(path, maskPaint);
@@ -642,7 +705,11 @@ class _ScannerOverlayPainter extends CustomPainter {
       ..moveTo(scanRect.left, scanRect.top + cornerLen)
       ..lineTo(scanRect.left, scanRect.top + r)
       ..quadraticBezierTo(
-          scanRect.left, scanRect.top, scanRect.left + r, scanRect.top)
+        scanRect.left,
+        scanRect.top,
+        scanRect.left + r,
+        scanRect.top,
+      )
       ..lineTo(scanRect.left + cornerLen, scanRect.top);
     drawCorner(tlPath);
 
@@ -651,7 +718,11 @@ class _ScannerOverlayPainter extends CustomPainter {
       ..moveTo(scanRect.right - cornerLen, scanRect.top)
       ..lineTo(scanRect.right - r, scanRect.top)
       ..quadraticBezierTo(
-          scanRect.right, scanRect.top, scanRect.right, scanRect.top + r)
+        scanRect.right,
+        scanRect.top,
+        scanRect.right,
+        scanRect.top + r,
+      )
       ..lineTo(scanRect.right, scanRect.top + cornerLen);
     drawCorner(trPath);
 
@@ -660,7 +731,11 @@ class _ScannerOverlayPainter extends CustomPainter {
       ..moveTo(scanRect.left, scanRect.bottom - cornerLen)
       ..lineTo(scanRect.left, scanRect.bottom - r)
       ..quadraticBezierTo(
-          scanRect.left, scanRect.bottom, scanRect.left + r, scanRect.bottom)
+        scanRect.left,
+        scanRect.bottom,
+        scanRect.left + r,
+        scanRect.bottom,
+      )
       ..lineTo(scanRect.left + cornerLen, scanRect.bottom);
     drawCorner(blPath);
 
@@ -669,7 +744,11 @@ class _ScannerOverlayPainter extends CustomPainter {
       ..moveTo(scanRect.right - cornerLen, scanRect.bottom)
       ..lineTo(scanRect.right - r, scanRect.bottom)
       ..quadraticBezierTo(
-          scanRect.right, scanRect.bottom, scanRect.right, scanRect.bottom - r)
+        scanRect.right,
+        scanRect.bottom,
+        scanRect.right,
+        scanRect.bottom - r,
+      )
       ..lineTo(scanRect.right, scanRect.bottom - cornerLen);
     drawCorner(brPath);
 
@@ -680,35 +759,38 @@ class _ScannerOverlayPainter extends CustomPainter {
     if (laserY >= scanRect.top && laserY <= scanRect.bottom) {
       // Glow effect
       final glowPaint = Paint()
-        ..shader = LinearGradient(
-          colors: [
-            const Color(0xFF1E70EB).withValues(alpha: 0.0),
-            const Color(0xFF1E70EB).withValues(alpha: 0.6),
-            const Color(0xFF60A5FA).withValues(alpha: 0.8),
-            const Color(0xFF1E70EB).withValues(alpha: 0.6),
-            const Color(0xFF1E70EB).withValues(alpha: 0.0),
-          ],
-        ).createShader(
-            Rect.fromLTWH(scanRect.left, laserY - 16, scanRect.width, 32));
+        ..shader =
+            LinearGradient(
+              colors: [
+                const Color(0xFF1E70EB).withValues(alpha: 0.0),
+                const Color(0xFF1E70EB).withValues(alpha: 0.6),
+                const Color(0xFF60A5FA).withValues(alpha: 0.8),
+                const Color(0xFF1E70EB).withValues(alpha: 0.6),
+                const Color(0xFF1E70EB).withValues(alpha: 0.0),
+              ],
+            ).createShader(
+              Rect.fromLTWH(scanRect.left, laserY - 16, scanRect.width, 32),
+            );
 
       canvas.drawRect(
-        Rect.fromLTWH(
-            scanRect.left + 12, laserY - 16, scanRect.width - 24, 32),
+        Rect.fromLTWH(scanRect.left + 12, laserY - 16, scanRect.width - 24, 32),
         glowPaint,
       );
 
       // Crisp laser line
       final laserPaint = Paint()
-        ..shader = LinearGradient(
-          colors: [
-            const Color(0xFF1E70EB).withValues(alpha: 0.0),
-            const Color(0xFF60A5FA),
-            const Color(0xFF93C5FD),
-            const Color(0xFF60A5FA),
-            const Color(0xFF1E70EB).withValues(alpha: 0.0),
-          ],
-        ).createShader(
-            Rect.fromLTWH(scanRect.left, laserY - 1, scanRect.width, 2));
+        ..shader =
+            LinearGradient(
+              colors: [
+                const Color(0xFF1E70EB).withValues(alpha: 0.0),
+                const Color(0xFF60A5FA),
+                const Color(0xFF93C5FD),
+                const Color(0xFF60A5FA),
+                const Color(0xFF1E70EB).withValues(alpha: 0.0),
+              ],
+            ).createShader(
+              Rect.fromLTWH(scanRect.left, laserY - 1, scanRect.width, 2),
+            );
 
       laserPaint.strokeWidth = 2;
       canvas.drawLine(

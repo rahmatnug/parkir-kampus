@@ -51,6 +51,27 @@ class AdminService {
     }
   }
 
+  // ─── GET: Single user by ID (with kendaraans) ────────────────────────────
+  Future<Map<String, dynamic>> getUserById(int userId) async {
+    try {
+      final token = await _getToken();
+      final response = await http.get(
+        Uri.parse('$_baseUrl/admin/users/$userId'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      ).timeout(const Duration(seconds: 10));
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return data['user'] as Map<String, dynamic>;
+      }
+      throw Exception('Gagal memuat data user');
+    } catch (e) {
+      throw Exception('Network error: $e');
+    }
+  }
+
   // ─── GET: Activity logs ───────────────────────────────────────────────────
   Future<List<dynamic>> getActivities() async {
     try {
@@ -108,10 +129,32 @@ class AdminService {
 
       if (response.statusCode != 200) {
         final body = jsonDecode(response.body);
-        throw Exception(body['message'] ?? 'Gagal mengubah role');
+        throw Exception(body['message'] ?? 'Gagal update role');
       }
     } catch (e) {
-      throw Exception('Gagal mengubah role: $e');
+      throw Exception('Gagal update role: $e');
+    }
+  }
+
+  // ─── PUT: Update user admin ────────────────────────────────────────────────
+  Future<void> updateUserAdmin(int userId, Map<String, dynamic> data) async {
+    try {
+      final token = await _getToken();
+      final response = await http.put(
+        Uri.parse('$_baseUrl/admin/users/$userId'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode(data),
+      ).timeout(const Duration(seconds: 10));
+
+      if (response.statusCode != 200) {
+        final body = jsonDecode(response.body);
+        throw Exception(body['message'] ?? 'Gagal memperbarui user');
+      }
+    } catch (e) {
+      throw Exception('Gagal memperbarui user: $e');
     }
   }
 
@@ -142,7 +185,7 @@ class AdminService {
     try {
       final token = await _getToken();
       final response = await http.get(
-        Uri.parse('$_baseUrl/admin/blacklist'),
+        Uri.parse('$_baseUrl/admin/blacklists'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
@@ -157,6 +200,115 @@ class AdminService {
       throw Exception('Network error: $e');
     }
   }
+
+  // ─── GET: Pending Laporan ──────────────────────────────────────────────────
+  Future<List<dynamic>> getPendingLaporan() async {
+    try {
+      final token = await _getToken();
+      final response = await http.get(
+        Uri.parse('$_baseUrl/admin/laporan/pending'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      ).timeout(const Duration(seconds: 10));
+
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      }
+      throw Exception('Failed to load pending laporan: ${response.statusCode}');
+    } catch (e) {
+      throw Exception('Error loading pending laporan: $e');
+    }
+  }
+
+  // ─── GET: Blacklist Stats ───────────────────────────────────────────────────
+  Future<Map<String, dynamic>> getBlacklistStats() async {
+    try {
+      final token = await _getToken();
+      final response = await http.get(
+        Uri.parse('$_baseUrl/admin/blacklist-stats'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      }
+      throw Exception('Failed to load blacklist stats');
+    } catch (e) {
+      throw Exception('Network error: $e');
+    }
+  }
+
+  // ─── GET: Laporan Detail ───────────────────────────────────────────────────
+  Future<Map<String, dynamic>> getLaporanDetail(int laporanId) async {
+    try {
+      final token = await _getToken();
+      final response = await http.get(
+        Uri.parse('$_baseUrl/admin/laporan/$laporanId'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      }
+      throw Exception('Failed to load laporan detail');
+    } catch (e) {
+      throw Exception('Network error: $e');
+    }
+  }
+
+  // ─── POST: Approve Laporan ────────────────────────────────────────────────
+  Future<void> approveLaporan(int laporanId, int poin, String pelanggaran) async {
+    try {
+      final token = await _getToken();
+      final response = await http.post(
+        Uri.parse('$_baseUrl/admin/penalti/approve'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({
+          'id_laporan': laporanId,
+          'poin_penalti': poin,
+          'jenis_pelanggaran': pelanggaran,
+        }),
+      ).timeout(const Duration(seconds: 10));
+
+      if (response.statusCode != 200) {
+        final body = jsonDecode(response.body);
+        throw Exception(body['error'] ?? body['message'] ?? 'Gagal approve laporan');
+      }
+    } catch (e) {
+      throw Exception('Gagal approve laporan: $e');
+    }
+  }
+
+  // ─── PUT: Reject Laporan ────────────────────────────────────────────────
+  Future<void> rejectLaporan(int laporanId) async {
+    try {
+      final token = await _getToken();
+      final response = await http.put(
+        Uri.parse('$_baseUrl/admin/laporan/$laporanId/reject'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      ).timeout(const Duration(seconds: 10));
+
+      if (response.statusCode != 200) {
+        final body = jsonDecode(response.body);
+        throw Exception(body['error'] ?? body['message'] ?? 'Gagal reject laporan');
+      }
+    } catch (e) {
+      throw Exception('Gagal reject laporan: $e');
+    }
+  }
+
   // ─── POST: Force Exit Activity ────────────────────────────────────────────
   Future<void> forceExitActivity(int activityId) async {
     try {
@@ -237,7 +389,7 @@ class AdminService {
       );
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        return data['data'] ?? [];
+        return data['zones'] ?? data['data'] ?? [];
       }
       throw Exception('Failed to load zones');
     } catch (e) {
@@ -246,7 +398,7 @@ class AdminService {
   }
 
   // ─── POST: Generate QR (Creates a Zone) ───────────────────────────────────
-  Future<void> generateQrCode(String name, {String deskripsi = '', int kapasitas = 50, String jenisKendaraan = 'motor'}) async {
+  Future<Map<String, dynamic>> generateQrCode(String name, {String deskripsi = '', int kapasitas = 50, String jenisKendaraan = 'motor'}) async {
     try {
       final token = await _getToken();
       final response = await http.post(
@@ -263,11 +415,13 @@ class AdminService {
         }),
       ).timeout(const Duration(seconds: 10));
 
-      if (response.statusCode != 200 && response.statusCode != 201) {
-        final body = jsonDecode(response.body);
-        throw Exception(body['message'] ?? 'Gagal membuat zona');
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return jsonDecode(response.body);
       }
+      final body = jsonDecode(response.body);
+      throw Exception(body['message'] ?? 'Gagal membuat zona');
     } catch (e) {
+      if (e is Exception) rethrow;
       throw Exception('Gagal membuat zona: $e');
     }
   }

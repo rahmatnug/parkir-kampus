@@ -10,6 +10,12 @@ type DashboardStats struct {
 	RegisteredUsers int `json:"registered_users"`
 }
 
+// BlacklistStats represents KPI for Blacklist page
+type BlacklistStats struct {
+	TotalBlacklisted   int `json:"total_blacklisted"`
+	ActiveRestrictions int `json:"active_restrictions"`
+}
+
 // AdminUserItem represents a user in the admin table
 type AdminUserItem struct {
 	ID        uint      `json:"id"`
@@ -35,17 +41,24 @@ type AdminActivityItem struct {
 	Status      string     `json:"status"`
 }
 
-// BlacklistItem represents a user with accumulated penalty points > threshold
 type BlacklistItem struct {
-	UserID         uint   `json:"user_id"`
-	Name           string `json:"name"`
-	Email          string `json:"email"`
-	Role           string `json:"role"`
-	TotalPoin      int    `json:"total_poin"`
-	JumlahKasus    int    `json:"jumlah_kasus"`
-	NomorPolisi    string `json:"nomor_polisi"`
-	AlasanTerakhir string `json:"alasan_terakhir"`
-	StatusHukuman  string `json:"status_hukuman"`
+	NamaUser            string `json:"nama_user"`
+	Nim                 string `json:"nim"`
+	AvatarUrl           string `json:"avatar_url"`
+	NamaRole            string `json:"nama_role"`
+	NomorPolisi         string `json:"nomor_polisi"`
+	TotalPoin           int    `json:"total_poin"`
+	JumlahKasus         int    `json:"jumlah_kasus"`
+	PelanggaranTerakhir string `json:"pelanggaran_terakhir"`
+	StatusPeringatan    string `json:"status_peringatan"`
+}
+
+type PendingLaporanItem struct {
+	IDLaporan       uint      `json:"id_laporan"`
+	TipePelanggaran string    `json:"tipe_pelanggaran"`
+	NomorPolisi     string    `json:"nomor_polisi"`
+	NamaPetugas     string    `json:"nama_petugas"`
+	CreatedAt       time.Time `json:"created_at"`
 }
 
 // ZoneWithSlots is a read-model returned when listing zones with their slot counts
@@ -53,8 +66,8 @@ type ZoneWithSlots struct {
 	IDZona         uint   `json:"id_zona"`
 	NamaZona       string `json:"nama_zona"`
 	Deskripsi      string `json:"deskripsi"`
-	Kapasitas      int    `json:"kapasitas"`
-	JenisKendaraan string `json:"jenis_kendaraan"`
+	KapasitasMotor int    `json:"kapasitas_motor"`
+	KapasitasMobil int    `json:"kapasitas_mobil"`
 	Status         string `json:"status"`
 	TotalSlots     int    `json:"total_slots"`
 	AvailableSlots int    `json:"available_slots"`
@@ -69,12 +82,20 @@ type AdminRepository interface {
 	UpdateUserRole(userID uint, newRole string) error
 	UpdateUserStatus(userID uint, newStatus string) error
 	GetBlacklistedUsers() ([]BlacklistItem, error)
+	GetBlacklistStats() (*BlacklistStats, error)
 	ForceExitActivity(activityID uint) error
 	AddPenalty(userID uint, poin int, keterangan string) error
 	RemovePenalty(userID uint) error
+	GetLaporanDetail(id uint) (*LaporanDetail, error)
+	ApproveLaporan(laporanID uint, poin int, pelanggaran string) error
+	RejectLaporan(laporanID uint) error
+	GetPendingLaporan() ([]PendingLaporanItem, error)
 	HasActiveTransaction(userID uint) (bool, error)
 	GetTotalPenaltyPoints(userID uint) (int, error)
 	CreateBlacklist(userID uint, alasan string) error
+	CreateLaporan(laporan *LaporanPetugas, jenisKendaraan string) error
+	UpdateUserAdmin(userID uint, nama, nim string, roleID uint, status, nomorPolisi, jenisKendaraan string) error
+	GetUserByID(userID uint) (*User, error)
 
 	// Zone CRUD
 	CreateZone(zone *ZonaParkir) error
@@ -98,14 +119,22 @@ type AdminUsecase interface {
 	UpdateUserRole(userID uint, newRole string) error
 	UpdateUserStatus(userID uint, newStatus string) error
 	GetBlacklist() ([]BlacklistItem, error)
+	GetBlacklistStats() (*BlacklistStats, error)
 	ForceExitActivity(activityID uint) error
 	AddPenalty(userID uint, poin int, keterangan string) error
 	RemovePenalty(userID uint) error
+	GetLaporanDetail(id uint) (*LaporanDetail, error)
+	ApproveLaporan(laporanID uint, poin int, pelanggaran string) error
+	RejectLaporan(laporanID uint) error
+	GetPendingLaporan() ([]PendingLaporanItem, error)
+	CreateLaporan(petugasID uint, targetIdentifier, jenisKendaraan, deskripsi, buktiFoto string) error
+	UpdateUserAdmin(userID uint, nama, nim string, roleID uint, status, nomorPolisi, jenisKendaraan string) error
+	GetUserByID(userID uint) (*User, error)
 
 	// Zone CRUD
-	CreateZone(namaZona string, deskripsi string, kapasitas int, jenisKendaraan string) error
+	CreateZone(namaZona string, deskripsi string, kapasitasMotor int, kapasitasMobil int) (uint, error)
 	GetAllZones() ([]ZoneWithSlots, error)
-	UpdateZone(zonaID uint, namaZona string, deskripsi string, kapasitas int, jenisKendaraan string) error
+	UpdateZone(zonaID uint, namaZona string, deskripsi string, kapasitasMotor int, kapasitasMobil int) error
 	DeleteZone(zonaID uint) error
 
 	// Slot CRUD

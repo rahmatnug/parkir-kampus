@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/rahmatnug/parkir-kampus-backend/internal/domain"
@@ -45,6 +46,12 @@ func (r *parkingRepository) GetActiveTransaksi(userID uint) (*domain.Transaksi, 
 }
 
 func (r *parkingRepository) UpdateTransaksi(tx *domain.Transaksi) error {
+	if tx.WaktuKeluar != nil {
+		return r.db.Model(&domain.Transaksi{}).Where("id_transaksi = ?", tx.IDTransaksi).Updates(map[string]interface{}{
+			"waktu_keluar": *tx.WaktuKeluar,
+			"status":       tx.Status,
+		}).Error
+	}
 	return r.db.Save(tx).Error
 }
 
@@ -87,10 +94,21 @@ func (r *parkingRepository) GetZoneByID(zonaID uint) (*domain.ZonaParkir, error)
 	return &zone, nil
 }
 
-// GetZoneByCode finds a zone by its nama_zona (the code embedded in the QR).
-// Supports formats like "ZONE-A" -> looks for "Zone A", or direct name match.
+// GetZoneByCode finds a zone by its nama_zona or id_zona (the code embedded in the QR).
+// Supports formats like "ZONE-A" -> looks for "Zone A", direct name match, or numeric ID.
 func (r *parkingRepository) GetZoneByCode(code string) (*domain.ZonaParkir, error) {
 	var zone domain.ZonaParkir
+	
+	// First, check if the code is a numeric ID
+	var id int
+	_, errScan := fmt.Sscanf(code, "%d", &id)
+	if errScan == nil {
+		err := r.db.Where("id_zona = ?", id).First(&zone).Error
+		if err == nil {
+			return &zone, nil
+		}
+	}
+
 	// Try exact match first, then case-insensitive
 	err := r.db.Where("LOWER(nama_zona) = LOWER(?)", code).First(&zone).Error
 	if err != nil {
@@ -102,7 +120,7 @@ func (r *parkingRepository) GetZoneByCode(code string) (*domain.ZonaParkir, erro
 // GetUserKendaraan returns the first registered vehicle for a user.
 func (r *parkingRepository) GetUserKendaraan(userID uint) (*domain.Kendaraan, error) {
 	var k domain.Kendaraan
-	err := r.db.Where("id_user = ?", userID).First(&k).Error
+	err := r.db.Where("id_user = ?", userID).Order("created_at DESC").First(&k).Error
 	if err != nil {
 		return nil, err
 	}
@@ -149,9 +167,9 @@ func (r *parkingRepository) BookSlotAndCreateTransaction(userID uint, kendaraanI
 			UserID:      userID,
 			KendaraanID: kendaraanID,
 			SlotID:      slot.IDSlot,
-			WaktuMasuk:  time.Now(),
 			Status:      "parkir",
 		}
+		transaksi.WaktuMasuk = time.Now()
 		if err := tx.Create(&transaksi).Error; err != nil {
 			return err
 		}
@@ -189,7 +207,10 @@ func (r *parkingRepository) ReleaseSlotAndUpdateTransaction(userID uint) (*domai
 		resultTx.WaktuKeluar = &now
 		resultTx.Status = "selesai"
 
-		if err := tx.Save(&resultTx).Error; err != nil {
+		if err := tx.Model(&domain.Transaksi{}).Where("id_transaksi = ?", resultTx.IDTransaksi).Updates(map[string]interface{}{
+			"waktu_keluar": now,
+			"status":       "selesai",
+		}).Error; err != nil {
 			return err
 		}
 
@@ -214,6 +235,22 @@ func (r *parkingRepository) GetSlotsByZone(zonaID uint) ([]domain.SlotParkir, er
 	var slots []domain.SlotParkir
 	err := r.db.Where("id_zona = ?", zonaID).Order("nomor_slot ASC").Find(&slots).Error
 	return slots, err
+}
+
+func (r *parkingRepository) GetOccupancyByVehicleType(zonaID uint) (int, int, error) {
+	var motor, mobil int64
+	err := r.db.Model(&domain.Transaksi{}).
+		Joins("JOIN kendaraans ON kendaraans.id_kendaraan = transaksis.id_kendaraan").
+		Joins("JOIN slot_parkirs ON slot_parkirs.id_slot = transaksis.id_slot").
+		Where("slot_parkirs.id_zona = ? AND transaksis.status = 'parkir'", zonaID).
+		Select("SUM(CASE WHEN kendaraans.jenis_kendaraan = 'motor' THEN 1 ELSE 0 END) as motor, SUM(CASE WHEN kendaraans.jenis_kendaraan = 'mobil' THEN 1 ELSE 0 END) as mobil").
+		Row().Scan(&motor, &mobil)
+	
+	if err != nil {
+		// if no rows or null, just return 0,0
+		return 0, 0, nil
+	}
+	return int(motor), int(mobil), nil
 }
 
 func (r *parkingRepository) GetUserHistory(userID uint) ([]domain.Transaksi, error) {

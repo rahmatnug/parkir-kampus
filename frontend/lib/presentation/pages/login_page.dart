@@ -3,6 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:frontend/presentation/providers/auth_provider.dart';
 import 'package:frontend/presentation/pages/user_auth_page.dart';
+import 'package:frontend/presentation/pages/petugas_report_page.dart';
+import 'package:frontend/presentation/pages/dashboard_page.dart';
+import 'package:frontend/presentation/pages/admin_dashboard_home.dart';
+import 'package:frontend/presentation/pages/user_home_page.dart';
 import 'package:frontend/main.dart';
 
 class LoginPage extends StatefulWidget {
@@ -50,7 +54,24 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
   }
 
   Future<void> _handleLogin() async {
-    if (!_formKey.currentState!.validate()) return;
+    if (!_formKey.currentState!.validate()) {
+      ScaffoldMessenger.of(context).clearSnackBars();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Row(
+            children: [
+              Icon(Icons.error_outline, color: Colors.white, size: 20),
+              SizedBox(width: 10),
+              Text('Harap isi email dan password', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w500)),
+            ],
+          ),
+          backgroundColor: const Color(0xFFDC2626),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        ),
+      );
+      return;
+    }
     setState(() => _isLoading = true);
     try {
       bool success = await context.read<AuthProvider>().login(
@@ -60,27 +81,44 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
       );
       if (success) {
         if (!mounted) return;
+        
         Navigator.of(context).pushAndRemoveUntil(
           MaterialPageRoute(builder: (_) => const AuthGate()),
           (Route<dynamic> route) => false,
         );
       } else {
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(context.read<AuthProvider>().errorMessage ?? 'Gagal login'),
-            backgroundColor: Colors.redAccent,
-            behavior: SnackBarBehavior.floating,
+        final msg = context.read<AuthProvider>().errorMessage ?? 'Gagal login';
+        debugPrint('Menampilkan snackbar error: $msg');
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Login Gagal'),
+            content: Text(msg),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('OK'),
+              ),
+            ],
           ),
         );
       }
     } catch (e) {
+      debugPrint('LoginPage catch Exception (mounted=$mounted): $e');
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(e.toString()),
-          backgroundColor: Colors.redAccent,
-          behavior: SnackBarBehavior.floating,
+      final msg = e.toString().replaceFirst('Exception: ', '');
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Login Gagal'),
+          content: Text(msg),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('OK'),
+            ),
+          ],
         ),
       );
     } finally {

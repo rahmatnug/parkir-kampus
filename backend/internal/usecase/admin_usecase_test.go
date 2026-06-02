@@ -42,6 +42,13 @@ func (m *mockAdminRepo) DeleteZone(zonaID uint) error                           
 func (m *mockAdminRepo) CreateSlot(slot *domain.SlotParkir) error                   { return nil }
 func (m *mockAdminRepo) GetSlotsByZone(zonaID uint) ([]domain.SlotParkir, error)   { return nil, nil }
 func (m *mockAdminRepo) DeleteSlot(slotID uint) error                               { return nil }
+func (m *mockAdminRepo) GetBlacklistStats() (*domain.BlacklistStats, error)         { return nil, nil }
+func (m *mockAdminRepo) GetPendingLaporan() ([]domain.PendingLaporanItem, error)    { return nil, nil }
+func (m *mockAdminRepo) GetLaporanDetail(id uint) (*domain.LaporanDetail, error)    { return nil, nil }
+func (m *mockAdminRepo) ApproveLaporan(laporanID uint, poin int, pelanggaran string) error { return nil }
+func (m *mockAdminRepo) CreateLaporan(laporan *domain.LaporanPetugas) error { return nil }
+func (m *mockAdminRepo) UpdateUserAdmin(userID uint, nama, nim string, roleID uint, status, nomorPolisi, jenisKendaraan string) error { return nil }
+func (m *mockAdminRepo) GetUserByID(userID uint) (*domain.User, error)                                                              { return nil, nil }
 
 func (m *mockAdminRepo) DeleteUser(userID uint) error {
 	m.deleteUserCalled = true
@@ -205,7 +212,7 @@ func TestCreateZone_DuplicateName_Rejected(t *testing.T) {
 	}
 	uc := NewAdminUsecase(repo, &mockWSHub{})
 
-	err := uc.CreateZone("Zone A", "desc", 50, "motor")
+	_, err := uc.CreateZone("Zone A", "desc", 50, 10)
 	if err == nil {
 		t.Fatal("expected error for duplicate zone name, got nil")
 	}
@@ -218,7 +225,7 @@ func TestCreateZone_ZeroCapacity_Rejected(t *testing.T) {
 	repo := &mockAdminRepo{}
 	uc := NewAdminUsecase(repo, &mockWSHub{})
 
-	err := uc.CreateZone("Zone X", "desc", 0, "motor")
+	_, err := uc.CreateZone("Zone X", "desc", -1, -1)
 	if err == nil {
 		t.Fatal("expected error for zero capacity, got nil")
 	}
@@ -228,7 +235,7 @@ func TestCreateZone_EmptyName_Rejected(t *testing.T) {
 	repo := &mockAdminRepo{}
 	uc := NewAdminUsecase(repo, &mockWSHub{})
 
-	err := uc.CreateZone("  ", "desc", 50, "motor")
+	_, err := uc.CreateZone("  ", "desc", 50, 0)
 	if err == nil {
 		t.Fatal("expected error for empty zone name, got nil")
 	}
@@ -240,7 +247,7 @@ func TestCreateZone_Success(t *testing.T) {
 	}
 	uc := NewAdminUsecase(repo, &mockWSHub{})
 
-	err := uc.CreateZone("Zone D", "new zone", 30, "mobil")
+	_, err := uc.CreateZone("Zone D", "new zone", 30, 20)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

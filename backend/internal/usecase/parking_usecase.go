@@ -37,18 +37,44 @@ func (u *parkingUsecase) getWaitlistPriority(roleName string) int64 {
 }
 
 func (u *parkingUsecase) TapIn(userID uint, kendaraanID uint, zonaID uint) (*domain.Transaksi, string, error) {
-	// 1. Check if slots are full
-	count, err := u.repo.CountAvailableSlots(zonaID)
+	// 0. Validate Vehicle Type Match
+	kendaraan, err := u.repo.GetUserKendaraan(userID)
+	if err != nil {
+		return nil, "", errors.New("NO_VEHICLE: Anda belum memiliki kendaraan terdaftar. Silakan daftarkan kendaraan terlebih dahulu")
+	}
+
+	zone, err := u.repo.GetZoneByID(zonaID)
+	if err != nil {
+		return nil, "", errors.New("INVALID_ZONE: Zona tidak ditemukan")
+	}
+
+	// 1. Check if capacities are full
+	motor, mobil, err := u.repo.GetOccupancyByVehicleType(zonaID)
 	if err != nil {
 		return nil, "", err
 	}
 
-	if count == 0 {
+	user, err := u.userRepo.FindByID(userID)
+	if err != nil {
+		return nil, "", err
+	}
+
+	jenisStr := strings.ToLower(strings.TrimSpace(kendaraan.JenisKendaraan))
+	sisaSlot := 0
+
+	if jenisStr == "motor" {
+		sisaSlot = zone.KapasitasMotor - motor
+	} else if jenisStr == "mobil" {
+		sisaSlot = zone.KapasitasMobil - mobil
+	}
+
+	isFull := sisaSlot <= 0
+	if sisaSlot < 2 && user.Role.Prioritas >= 3 {
+		isFull = true
+	}
+
+	if isFull {
 		// Full, enter waitlist
-		user, err := u.userRepo.FindByID(userID)
-		if err != nil {
-			return nil, "", err
-		}
 
 		priority := u.getWaitlistPriority(user.Role.NamaRole)
 		timestamp := time.Now().UnixMilli()
@@ -84,9 +110,9 @@ func (u *parkingUsecase) TapIn(userID uint, kendaraanID uint, zonaID uint) (*dom
 		UserID:      userID,
 		KendaraanID: kendaraanID,
 		SlotID:      slot.IDSlot,
-		WaktuMasuk:  time.Now(),
 		Status:      "parkir",
 	}
+	tx.WaktuMasuk = time.Now()
 
 	if err := u.repo.CreateTransaksi(tx); err != nil {
 		return nil, "", err
@@ -107,6 +133,17 @@ func (u *parkingUsecase) TapOut(userID uint) (*domain.Transaksi, error) {
 	}
 
 	now := time.Now()
+	
+	if now.Sub(tx.WaktuMasuk).Hours() > 24 {
+		p := &domain.Penalti{
+			UserID:           userID,
+			JenisPelanggaran: "Menginap / Overtime",
+			PoinPenalti:      50,
+			Tanggal:          now,
+		}
+		u.repo.CreatePenalti(p)
+	}
+
 	tx.WaktuKeluar = &now
 	tx.Status = "selesai"
 
@@ -162,9 +199,9 @@ func (u *parkingUsecase) AssignSlotFromWaitlist(zonaID uint) error {
 		UserID:      userID,
 		KendaraanID: kendaraanID,
 		SlotID:      slot.IDSlot,
-		WaktuMasuk:  time.Now(),
 		Status:      "parkir",
 	}
+	tx.WaktuMasuk = time.Now()
 
 	if err := u.repo.CreateTransaksi(tx); err != nil {
 		return err
@@ -188,6 +225,11 @@ func (u *parkingUsecase) ProcessParkingEntry(userID uint, qrCode string) (*domai
 	}
 	if totalPoin >= 100 {
 		return nil, errors.New("BLACKLISTED: akses parkir ditolak karena akumulasi poin penalti telah mencapai batas")
+	}
+
+	user, err := u.userRepo.FindByID(userID)
+	if err == nil && user.Status == "blocked" {
+		return nil, errors.New("BLACKLISTED: Akses Parkir Diblokir")
 	}
 
 	// 2. Check for existing active parking session
@@ -215,9 +257,26 @@ func (u *parkingUsecase) ProcessParkingEntry(userID uint, qrCode string) (*domai
 		return nil, errors.New("NO_VEHICLE: Anda belum memiliki kendaraan terdaftar. Silakan daftarkan kendaraan terlebih dahulu")
 	}
 
-	// 4b. Anti-Mismatch Validation
-	if strings.ToLower(kendaraan.JenisKendaraan) != strings.ToLower(zone.JenisKendaraan) {
-		return nil, fmt.Errorf("VEHICLE_TYPE_MISMATCH: Maaf, Anda tidak bisa parkir di Zona %s menggunakan %s", strings.Title(zone.JenisKendaraan), strings.Title(kendaraan.JenisKendaraan))
+	// 4b. Anti-Mismatch Validation and Capacity Check
+	motor, mobil, err := u.repo.GetOccupancyByVehicleType(zone.IDZona)
+	if err != nil {
+		return nil, err
+	}
+
+	jenisStr := strings.ToLower(strings.TrimSpace(kendaraan.JenisKendaraan))
+	sisaSlot := 0
+	if jenisStr == "motor" {
+		sisaSlot = zone.KapasitasMotor - motor
+	} else if jenisStr == "mobil" {
+		sisaSlot = zone.KapasitasMobil - mobil
+	}
+
+	if sisaSlot <= 0 {
+		return nil, fmt.Errorf("ZONE_FULL: Kapasitas %s Penuh", strings.Title(jenisStr))
+	}
+
+	if sisaSlot < 2 && user.Role.Prioritas >= 3 {
+		return nil, fmt.Errorf("ZONE_FULL: Sisa slot terbatas (prioritas rendah ditolak). Silakan cari zona lain")
 	}
 
 	// 5. Atomic slot booking
@@ -247,29 +306,47 @@ func (u *parkingUsecase) ProcessParkingEntry(userID uint, qrCode string) (*domai
 func normalizeZoneCode(code string) string {
 	code = strings.TrimSpace(code)
 
-	// Handle "ZONE-A" / "ZONE-B" format
-	if strings.HasPrefix(strings.ToUpper(code), "ZONE-") {
-		letter := strings.TrimPrefix(strings.ToUpper(code), "ZONE-")
-		return "Zone " + letter
-	}
-
-	// Handle "PK-ZONE-A" format
+	// Direct match for absolute standard "PK-ZONE-{nama_zona}"
 	if strings.HasPrefix(strings.ToUpper(code), "PK-ZONE-") {
-		letter := strings.TrimPrefix(strings.ToUpper(code), "PK-ZONE-")
-		return "Zone " + letter
+		return strings.TrimSpace(code[8:])
 	}
 
-	// Handle single letter "A", "B", "C"
+	// Handle trailing "-QR" payload from scanner
+	if strings.HasSuffix(strings.ToUpper(code), "-QR") {
+		code = code[:len(code)-3]
+	}
+
+	// Legacy handling "ZONE-A" or "ZONA-A" -> "Zona A"
+	upperCode := strings.ToUpper(code)
+	if strings.HasPrefix(upperCode, "ZONE-") || strings.HasPrefix(upperCode, "ZONA-") {
+		letter := code[5:]
+		return "Zona " + strings.ToUpper(letter)
+	}
+
+	// Handle single letter "A", "B", "C" -> "Zona A"
 	if len(code) == 1 {
-		return "Zone " + strings.ToUpper(code)
+		return "Zona " + strings.ToUpper(code)
 	}
 
-	// Otherwise return as-is (e.g., "Zone A" already)
+	// Otherwise return as-is
 	return code
 }
 
-// ProcessParkingExit handles the logic for a user exiting the parking.
 func (u *parkingUsecase) ProcessParkingExit(userID uint) (*domain.Transaksi, error) {
+	// Check overtime before closing transaction
+	activeTx, err := u.repo.GetActiveTransaksi(userID)
+	if err == nil && activeTx != nil {
+		if time.Since(activeTx.WaktuMasuk).Hours() > 24 {
+			p := &domain.Penalti{
+				UserID:           userID,
+				JenisPelanggaran: "Menginap / Overtime",
+				PoinPenalti:      50,
+				Tanggal:          time.Now(),
+			}
+			u.repo.CreatePenalti(p)
+		}
+	}
+
 	// Let the repository handle the transaction to ensure atomicity
 	tx, err := u.repo.ReleaseSlotAndUpdateTransaction(userID)
 	if err != nil {
@@ -295,21 +372,23 @@ func (u *parkingUsecase) broadcastSlotUpdate(zonaID uint) {
 		return
 	}
 	
-	count, err := u.repo.CountAvailableSlots(zonaID)
+	zone, err := u.repo.GetZoneByID(zonaID)
 	if err != nil {
 		return
 	}
-
-	zone, err := u.repo.GetZoneByID(zonaID)
+	
+	motor, mobil, err := u.repo.GetOccupancyByVehicleType(zonaID)
 	if err != nil {
 		return
 	}
 
 	u.wsHub.NotifySlotUpdate(domain.SlotUpdateData{
-		IDZona:    zone.IDZona,
-		NamaZona:  zone.NamaZona,
-		Tersedia:  int(count),
-		Kapasitas: zone.Kapasitas,
+		IDZona:         zone.IDZona,
+		NamaZona:       zone.NamaZona,
+		KapasitasMotor: zone.KapasitasMotor,
+		KapasitasMobil: zone.KapasitasMobil,
+		TerpakaiMotor:  motor,
+		TerpakaiMobil:  mobil,
 	})
 }
 
@@ -343,9 +422,6 @@ func (u *parkingUsecase) GetCurrentParking(userID uint) (*domain.ParkingEntryRes
 }
 
 // GetParkingStatus returns public zone occupancy data with coordinates.
-// Terisi dihitung dari slot ber-status 'occupied' secara langsung,
-// bukan dari (Kapasitas - available) agar tidak salah jika jumlah slot
-// di DB tidak sama dengan nilai Kapasitas di tabel zona_parkir.
 func (u *parkingUsecase) GetParkingStatus() ([]domain.ZoneStatus, error) {
 	zones, err := u.repo.GetAllZonesPublic()
 	if err != nil {
@@ -354,42 +430,31 @@ func (u *parkingUsecase) GetParkingStatus() ([]domain.ZoneStatus, error) {
 
 	var result []domain.ZoneStatus
 	for _, z := range zones {
-		// Ambil semua slot zona ini untuk menghitung jumlah aktual
+		// Ambil semua slot zona ini untuk menghitung koordinat
 		slots, slotErr := u.repo.GetSlotsByZone(z.IDZona)
 		
-		var totalSlots int
-		var terisi int
 		var xCoord, yCoord float64
 
 		if slotErr == nil && len(slots) > 0 {
-			totalSlots = len(slots)
-			
-			// Hitung 'occupied' secara langsung — akurat tanpa asumsi Kapasitas
 			var sumX, sumY float64
 			for _, s := range slots {
-				if s.Status == "occupied" {
-					terisi++
-				}
 				sumX += s.XCoord
 				sumY += s.YCoord
 			}
 			n := float64(len(slots))
 			xCoord = sumX / n
 			yCoord = sumY / n
-		} else {
-			// Fallback jika slot belum di-seed: pakai Kapasitas zona
-			totalSlots = z.Kapasitas
-			terisi = 0
-			xCoord = 0.0
-			yCoord = 0.0
 		}
+
+		motor, mobil, _ := u.repo.GetOccupancyByVehicleType(z.IDZona)
 
 		result = append(result, domain.ZoneStatus{
 			ID:             z.IDZona,
 			Nama:           z.NamaZona,
-			KapasitasMaks:  totalSlots, // total slot fisik, bukan Kapasitas di tabel zona
-			Terisi:         terisi,     // hitung langsung dari status 'occupied'
-			JenisKendaraan: z.JenisKendaraan,
+			KapasitasMotor: z.KapasitasMotor,
+			KapasitasMobil: z.KapasitasMobil,
+			TerpakaiMotor:  motor,
+			TerpakaiMobil:  mobil,
 			XCoord:         xCoord,
 			YCoord:         yCoord,
 		})

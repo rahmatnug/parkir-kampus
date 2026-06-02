@@ -28,29 +28,32 @@ class _ExitParkingPageState extends State<ExitParkingPage> {
 
   Future<void> _handleExit() async {
     setState(() => _isExiting = true);
-
     final provider = context.read<ParkingProvider>();
-    final result = await provider.exitParking();
 
-    if (!mounted) return;
-    setState(() => _isExiting = false);
+    try {
+      final result = await provider.exitParking();
 
-    if (result['success']) {
-      final data = result['data'];
-      if (data != null && data['waktu_masuk'] != null && data['waktu_keluar'] != null) {
-        try {
-          final start = DateTime.parse(data['waktu_masuk']);
-          final end = DateTime.parse(data['waktu_keluar']);
-          final diff = end.difference(start);
-          _duration = '${diff.inHours}h ${diff.inMinutes.remainder(60)}m';
-        } catch (_) {}
+      if (!mounted) return;
+
+      if (result['success']) {
+        setState(() => _exitSuccess = true);
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(result['message'] ?? 'Gagal keluar parkir'),
+          backgroundColor: Colors.red,
+        ));
       }
-      setState(() => _exitSuccess = true);
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(result['message'] ?? 'Gagal keluar parkir'),
-        backgroundColor: Colors.red,
-      ));
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('Terjadi kesalahan sistem: $e'),
+          backgroundColor: Colors.red,
+        ));
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isExiting = false);
+      }
     }
   }
 

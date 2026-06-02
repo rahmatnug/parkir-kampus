@@ -36,6 +36,7 @@ class _UserAuthPageState extends State<UserAuthPage>
   bool _regPassVisible = false;
   bool _regConfirmVisible = false;
   String _jenisKendaraan = '';
+  String _selectedRole = '';
 
   @override
   void initState() {
@@ -59,6 +60,7 @@ class _UserAuthPageState extends State<UserAuthPage>
 
   Future<void> _handleLogin() async {
     if (!_loginFormKey.currentState!.validate()) {
+      _showErrorSnack('Harap lengkapi semua field yang wajib diisi');
       return;
     }
     setState(() => _isLoading = true);
@@ -76,11 +78,12 @@ class _UserAuthPageState extends State<UserAuthPage>
         );
       } else {
         if (!mounted) return;
-        _showSnack(context.read<AuthProvider>().errorMessage ?? 'Gagal login');
+        _showErrorSnack(context.read<AuthProvider>().errorMessage ?? 'Gagal login');
       }
     } catch (e) {
+      debugPrint('UserAuthPage catch Exception (mounted=$mounted): $e');
       if (!mounted) return;
-      _showSnack(e.toString().replaceFirst('Exception: ', ''));
+      _showErrorSnack(e.toString().replaceFirst('Exception: ', ''));
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -88,10 +91,15 @@ class _UserAuthPageState extends State<UserAuthPage>
 
   Future<void> _handleRegister() async {
     if (!_registerFormKey.currentState!.validate()) {
+      _showErrorSnack('Harap lengkapi semua field yang wajib diisi');
+      return;
+    }
+    if (_selectedRole.isEmpty) {
+      _showErrorSnack('Pilih role terlebih dahulu');
       return;
     }
     if (_jenisKendaraan.isEmpty) {
-      _showSnack('Pilih jenis kendaraan terlebih dahulu');
+      _showErrorSnack('Pilih jenis kendaraan terlebih dahulu');
       return;
     }
     setState(() => _isLoading = true);
@@ -103,30 +111,61 @@ class _UserAuthPageState extends State<UserAuthPage>
             _regPassCtrl.text,
             _platCtrl.text.trim(),
             _jenisKendaraan,
+            role: _selectedRole,
           );
       if (success) {
-        _showSnack('Registrasi berhasil! Silakan login.');
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Registrasi berhasil!'),
+            backgroundColor: Colors.green,
+          ),
+        );
         _tabCtrl.animateTo(0);
         setState(() {});
       } else {
         if (!mounted) return;
-        _showSnack(context.read<AuthProvider>().errorMessage ?? 'Gagal register');
+        _showErrorSnack(context.read<AuthProvider>().errorMessage ?? 'Gagal register');
       }
     } catch (e) {
       if (!mounted) return;
-      _showSnack(e.toString().replaceFirst('Exception: ', ''));
+      _showErrorSnack(e.toString().replaceFirst('Exception: ', ''));
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
   }
 
-  void _showSnack(String msg) {
+  void _showErrorSnack(String msg) {
+    debugPrint('Menampilkan error: $msg');
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Login Gagal'),
+        content: Text(msg),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showSuccessSnack(String msg) {
+    ScaffoldMessenger.of(context).clearSnackBars();
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(msg),
-        backgroundColor: const Color(0xFF2563EB),
+        content: Row(
+          children: [
+            const Icon(Icons.check_circle_outline, color: Colors.white, size: 20),
+            const SizedBox(width: 10),
+            Expanded(child: Text(msg, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w500))),
+          ],
+        ),
+        backgroundColor: const Color(0xFF15803D),
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        duration: const Duration(seconds: 3),
       ),
     );
   }
@@ -440,6 +479,37 @@ class _UserAuthPageState extends State<UserAuthPage>
         key: const ValueKey('register'),
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+        // ─── ROLE DROPDOWN (PALING ATAS) ─────────────────────────────────
+        const _FieldLabel(label: 'ROLE'),
+        const SizedBox(height: 8),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: const Color(0xFFE2E8F0), width: 1.5),
+          ),
+          child: DropdownButtonHideUnderline(
+            child: DropdownButton<String>(
+              value: _selectedRole.isEmpty ? null : _selectedRole,
+              hint: const Text('Pilih Role', style: TextStyle(fontSize: 13, color: Color(0xFFB0BAC9))),
+              icon: const Icon(Icons.keyboard_arrow_down_rounded, color: Color(0xFF94A3B8)),
+              isExpanded: true,
+              isDense: true,
+              dropdownColor: Colors.white,
+              style: const TextStyle(fontSize: 13, color: Color(0xFF0F172A)),
+              onChanged: (v) => setState(() => _selectedRole = v ?? ''),
+              items: const [
+                DropdownMenuItem(value: 'mahasiswa', child: Text('Mahasiswa')),
+                DropdownMenuItem(value: 'dosen', child: Text('Dosen')),
+                DropdownMenuItem(value: 'staff', child: Text('Staff')),
+                DropdownMenuItem(value: 'tamu', child: Text('Tamu')),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 16),
+
         const _FieldLabel(label: 'NAMA LENGKAP'),
         const SizedBox(height: 8),
         _AuthField(
@@ -474,7 +544,7 @@ class _UserAuthPageState extends State<UserAuthPage>
           keyboardType: TextInputType.emailAddress,
           validator: (v) {
             if (v == null || v.isEmpty) return 'Email wajib diisi';
-            if (!RegExp(r'^[0-9]+@mhs\.unesa\.ac\.id$').hasMatch(v)) return 'Gunakan format email resmi: [NIM]@mhs.unesa.ac.id';
+            if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(v)) return 'Masukkan email yang valid';
             return null;
           },
         ),
@@ -515,86 +585,104 @@ class _UserAuthPageState extends State<UserAuthPage>
         ),
         const SizedBox(height: 16),
 
+        // ─── IDENTITAS KENDARAAN (GRID 2 KOLOM) ─────────────────────────
         const _FieldLabel(label: 'IDENTITAS KENDARAAN'),
         const SizedBox(height: 8),
 
         Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // PLAT NOMOR (KIRI)
             Expanded(
-              child: TextFormField(
-                controller: _platCtrl,
-                textCapitalization: TextCapitalization.characters,
-                style: const TextStyle(
-                    fontSize: 13,
-                    color: Color(0xFF0F172A),
-                    fontWeight: FontWeight.w500),
-                validator: (v) => v == null || v.isEmpty ? 'Isi plat nomor' : null,
-                decoration: InputDecoration(
-                  hintText: 'PLAT NOMOR',
-                  hintStyle: const TextStyle(
-                      fontSize: 13, color: Color(0xFFB0BAC9)),
-                  contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 14, vertical: 14),
-                  filled: true,
-                  fillColor: Colors.white,
-                  errorStyle: const TextStyle(color: Colors.red),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10),
-                    borderSide: const BorderSide(
-                        color: Color(0xFFE2E8F0), width: 1.5),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('PLAT NOMOR', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: Color(0xFF94A3B8), letterSpacing: 0.5)),
+                  const SizedBox(height: 6),
+                  TextFormField(
+                    controller: _platCtrl,
+                    textCapitalization: TextCapitalization.characters,
+                    style: const TextStyle(
+                        fontSize: 13,
+                        color: Color(0xFF0F172A),
+                        fontWeight: FontWeight.w500),
+                    validator: (v) => v == null || v.isEmpty ? 'Isi plat nomor' : null,
+                    decoration: InputDecoration(
+                      hintText: 'W 1234 AB',
+                      hintStyle: const TextStyle(
+                          fontSize: 13, color: Color(0xFFB0BAC9)),
+                      contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 14, vertical: 14),
+                      filled: true,
+                      fillColor: Colors.white,
+                      errorStyle: const TextStyle(color: Colors.red, fontSize: 11),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide: const BorderSide(
+                            color: Color(0xFFE2E8F0), width: 1.5),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide: const BorderSide(
+                            color: Color(0xFF2563EB), width: 1.5),
+                      ),
+                      errorBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide: const BorderSide(
+                            color: Colors.red, width: 1.5),
+                      ),
+                      focusedErrorBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide: const BorderSide(
+                            color: Colors.red, width: 1.5),
+                      ),
+                    ),
                   ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10),
-                    borderSide: const BorderSide(
-                        color: Color(0xFF2563EB), width: 1.5),
-                  ),
-                  errorBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10),
-                    borderSide: const BorderSide(
-                        color: Colors.red, width: 1.5),
-                  ),
-                  focusedErrorBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10),
-                    borderSide: const BorderSide(
-                        color: Colors.red, width: 1.5),
-                  ),
-                ),
+                ],
               ),
             ),
             const SizedBox(width: 10),
+            // JENIS KENDARAAN (KANAN)
             Expanded(
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 14, vertical: 4),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(
-                      color: const Color(0xFFE2E8F0), width: 1.5),
-                ),
-                child: DropdownButtonHideUnderline(
-                  child: DropdownButton<String>(
-                    value: _jenisKendaraan.isEmpty ? null : _jenisKendaraan,
-                    hint: const Text('Jenis Kendaraan',
-                        style: TextStyle(
-                            fontSize: 12, color: Color(0xFFB0BAC9))),
-                    icon: const Icon(Icons.keyboard_arrow_down_rounded,
-                        color: Color(0xFF94A3B8)),
-                    isDense: true,
-                    dropdownColor: Colors.white,
-                    style: const TextStyle(
-                        fontSize: 13, color: Color(0xFF0F172A)),
-                    onChanged: (v) =>
-                        setState(() => _jenisKendaraan = v ?? ''),
-                    items: ['Motor', 'Mobil']
-                        .map((e) => DropdownMenuItem(
-                              value: e.toLowerCase(),
-                              child: Text(e),
-                            ))
-                        .toList(),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('JENIS KENDARAAN', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: Color(0xFF94A3B8), letterSpacing: 0.5)),
+                  const SizedBox(height: 6),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 14, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                          color: const Color(0xFFE2E8F0), width: 1.5),
+                    ),
+                    child: DropdownButtonHideUnderline(
+                      child: DropdownButton<String>(
+                        value: _jenisKendaraan.isEmpty ? null : _jenisKendaraan,
+                        hint: const Text('Pilih',
+                            style: TextStyle(
+                                fontSize: 12, color: Color(0xFFB0BAC9))),
+                        icon: const Icon(Icons.keyboard_arrow_down_rounded,
+                            color: Color(0xFF94A3B8)),
+                        isDense: true,
+                        isExpanded: true,
+                        dropdownColor: Colors.white,
+                        style: const TextStyle(
+                            fontSize: 13, color: Color(0xFF0F172A)),
+                        onChanged: (v) =>
+                            setState(() => _jenisKendaraan = v ?? ''),
+                        items: ['Motor', 'Mobil']
+                            .map((e) => DropdownMenuItem(
+                                  value: e.toLowerCase(),
+                                  child: Text(e),
+                                ))
+                            .toList(),
+                      ),
+                    ),
                   ),
-                ),
+                ],
               ),
             ),
           ],

@@ -29,6 +29,10 @@ func (u *userUsecase) Register(nama, nim, email, password, platNomor, jenisKenda
 		if !strings.HasSuffix(email, "@mhs.unesa.ac.id") {
 			return nil, errors.New("registrasi mahasiswa wajib menggunakan email kampus @mhs.unesa.ac.id")
 		}
+	} else if roleName == "dosen" {
+		roleID = 2
+	} else if roleName == "staff" {
+		roleID = 4
 	} else if roleName == "tamu" {
 		roleID = 5
 	} else {
@@ -89,6 +93,11 @@ func (u *userUsecase) Login(email, password string) (string, *domain.User, error
 		return "", nil, errors.New("invalid email or password")
 	}
 
+	// Reject blocked/blacklisted users at login
+	if user.Status == "blocked" || user.Status == "blacklisted" {
+		return "", nil, errors.New("Akun Anda telah diblokir. Hubungi administrator.")
+	}
+
 	// Generate JWT token
 	token, err := jwt.GenerateToken(user.ID, user.RoleID)
 	if err != nil {
@@ -137,4 +146,11 @@ func (u *userUsecase) UpdateProfileImageURL(userID uint, imageURL string) error 
 		return errors.New("user tidak ditemukan")
 	}
 	return u.userRepo.UpdateProfileImageURL(userID, imageURL)
+}
+
+func (u *userUsecase) UpdateKendaraan(userID uint, kendaraanID uint, nomorPolisi, jenisKendaraan, warna string) error {
+	if nomorPolisi == "" {
+		return errors.New("nomor polisi tidak boleh kosong")
+	}
+	return u.userRepo.UpdateKendaraan(userID, kendaraanID, nomorPolisi, strings.ToLower(jenisKendaraan), warna)
 }

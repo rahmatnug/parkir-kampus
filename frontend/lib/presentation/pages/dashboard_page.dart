@@ -5,7 +5,7 @@ import 'admin_dashboard_home.dart';
 import 'user_management_page.dart';
 import 'aktivitas_parkir_page.dart';
 import 'change_password_page.dart';
-import 'blacklist_page.dart';
+import 'admin_blacklist_page.dart';
 import 'qr_registry_page.dart';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -29,7 +29,7 @@ class _DashboardPageState extends State<DashboardPage> {
     AdminDashboardHome(),
     UserManagementPage(),
     AktivitasParkirPage(),
-    BlacklistPage(),
+    AdminBlacklistPage(),
     QrRegistryPage(),
   ];
 
@@ -43,7 +43,14 @@ class _DashboardPageState extends State<DashboardPage> {
           appBar: isMobile
               ? AppBar(
                   backgroundColor: Colors.white,
-                  title: const Text('Admin Portal', style: TextStyle(color: kText, fontSize: 16, fontWeight: FontWeight.bold)),
+                  title: const Text(
+                    'Admin Portal',
+                    style: TextStyle(
+                      color: kText,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                   iconTheme: const IconThemeData(color: kText),
                   elevation: 0,
                   surfaceTintColor: Colors.transparent,
@@ -87,7 +94,7 @@ class _Sidebar extends StatelessWidget {
   static const _items = [
     _NavItem(icon: Icons.grid_view_rounded, label: 'Dashboard'),
     _NavItem(icon: Icons.people_alt_outlined, label: 'Users'),
-    _NavItem(icon: Icons.local_parking_rounded, label: 'Aktivitas Parkir'),
+    _NavItem(icon: Icons.directions_car, label: 'Aktivitas Parkir'),
     _NavItem(icon: Icons.block_rounded, label: 'Blacklist'),
     _NavItem(icon: Icons.qr_code_rounded, label: 'QR Registry'),
   ];
@@ -119,7 +126,8 @@ class _Sidebar extends StatelessWidget {
               child: Row(
                 children: [
                   Container(
-                    width: 36, height: 36,
+                    width: 36,
+                    height: 36,
                     decoration: BoxDecoration(
                       gradient: const LinearGradient(
                         colors: [Color(0xFF3B82F6), kBlue],
@@ -132,13 +140,18 @@ class _Sidebar extends StatelessWidget {
                           color: kBlue.withValues(alpha: 0.3),
                           blurRadius: 8,
                           offset: const Offset(0, 4),
-                        )
-                      ]
+                        ),
+                      ],
                     ),
                     child: const Center(
-                      child: Text('P',
-                          style: TextStyle(color: Colors.white,
-                              fontSize: 20, fontWeight: FontWeight.bold)),
+                      child: Text(
+                        'P',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                     ),
                   ),
                   const SizedBox(width: 10),
@@ -146,13 +159,24 @@ class _Sidebar extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('ParkirKampus',
-                            style: TextStyle(fontSize: 12,
-                                fontWeight: FontWeight.bold, color: kText),
-                            overflow: TextOverflow.ellipsis),
-                        Text('ADMIN MANAGEMENT',
-                            style: TextStyle(fontSize: 9, color: kMuted,
-                                letterSpacing: 0.8, fontWeight: FontWeight.w600)),
+                        Text(
+                          'ParkirKampus',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: kText,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        Text(
+                          'ADMIN MANAGEMENT',
+                          style: TextStyle(
+                            fontSize: 9,
+                            color: kMuted,
+                            letterSpacing: 0.8,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -196,18 +220,29 @@ class _Sidebar extends StatelessWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(auth.nama ?? 'Admin Parkir',
-                              style: const TextStyle(fontSize: 12,
-                                  fontWeight: FontWeight.w700, color: kText),
-                              overflow: TextOverflow.ellipsis),
+                          Text(
+                            auth.nama ?? 'Admin Parkir',
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                              color: kText,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
                           GestureDetector(
                             onTap: () => Navigator.of(context).push(
                               MaterialPageRoute(
                                 builder: (_) => const ChangePasswordPage(),
                               ),
                             ),
-                            child: const Text('Ganti Password?',
-                                style: TextStyle(fontSize: 10, color: kBlue, fontWeight: FontWeight.w500)),
+                            child: const Text(
+                              'Ganti Password?',
+                              style: TextStyle(
+                                fontSize: 10,
+                                color: kBlue,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
                           ),
                         ],
                       ),
@@ -215,8 +250,11 @@ class _Sidebar extends StatelessWidget {
                     IconButton(
                       padding: EdgeInsets.zero,
                       constraints: const BoxConstraints(),
-                      icon: const Icon(Icons.logout_rounded,
-                          size: 18, color: kMuted),
+                      icon: const Icon(
+                        Icons.logout_rounded,
+                        size: 18,
+                        color: kMuted,
+                      ),
                       onPressed: () => auth.logout(),
                     ),
                   ],
@@ -240,8 +278,11 @@ class _SidebarItem extends StatelessWidget {
   final _NavItem item;
   final bool selected;
   final VoidCallback onTap;
-  const _SidebarItem(
-      {required this.item, required this.selected, required this.onTap});
+  const _SidebarItem({
+    required this.item,
+    required this.selected,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -263,19 +304,18 @@ class _SidebarItem extends StatelessWidget {
         ),
         child: Row(
           children: [
-            Icon(item.icon,
-                size: 20,
-                color: selected ? kBlue : kMuted),
+            Icon(item.icon, size: 20, color: selected ? kBlue : kMuted),
             const SizedBox(width: 12),
             Expanded(
-              child: Text(item.label,
-                  style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: selected
-                          ? FontWeight.w700
-                          : FontWeight.w500,
-                      color: selected ? kBlue : kMuted),
-                  overflow: TextOverflow.ellipsis),
+              child: Text(
+                item.label,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                  color: selected ? kBlue : kMuted,
+                ),
+                overflow: TextOverflow.ellipsis,
+              ),
             ),
           ],
         ),

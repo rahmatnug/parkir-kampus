@@ -5,6 +5,7 @@ class ParkingEntryResult {
   final String status;
   final double xCoord;
   final double yCoord;
+  final String waktuMasuk;
 
   ParkingEntryResult({
     required this.transaksiId,
@@ -13,6 +14,7 @@ class ParkingEntryResult {
     required this.status,
     required this.xCoord,
     required this.yCoord,
+    this.waktuMasuk = '',
   });
 
   factory ParkingEntryResult.fromJson(Map<String, dynamic> json) {
@@ -23,6 +25,7 @@ class ParkingEntryResult {
       status: json['status'] as String? ?? '',
       xCoord: (json['x_coord'] as num?)?.toDouble() ?? 0.0,
       yCoord: (json['y_coord'] as num?)?.toDouble() ?? 0.0,
+      waktuMasuk: json['waktu_masuk'] as String? ?? '',
     );
   }
 
@@ -34,6 +37,7 @@ class ParkingEntryResult {
       'status': status,
       'x_coord': xCoord,
       'y_coord': yCoord,
+      'waktu_masuk': waktuMasuk,
     };
   }
 }

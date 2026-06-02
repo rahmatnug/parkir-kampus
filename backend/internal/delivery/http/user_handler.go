@@ -32,8 +32,10 @@ func NewUserHandler(r *gin.Engine, us domain.UserUsecase) {
 	protected.Use(AuthMiddleware())
 	{
 		protected.GET("/profile", handler.GetProfile)
+		protected.PUT("/profile", handler.UpdateKendaraan) // Alias
 		protected.PUT("/change-password", handler.ChangePassword)
 		protected.POST("/avatar", handler.UploadAvatar)
+		protected.PUT("/kendaraan", handler.UpdateKendaraan)
 	}
 }
 
@@ -50,6 +52,32 @@ func (a *UserHandler) GetProfile(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"status": "success",
 		"user":   user,
+	})
+}
+
+func (a *UserHandler) UpdateKendaraan(c *gin.Context) {
+	userID := c.MustGet("id_user").(uint)
+
+	var input struct {
+		IDKendaraan    uint   `json:"id_kendaraan" binding:"required"`
+		NomorPolisi    string `json:"nomor_polisi" binding:"required"`
+		JenisKendaraan string `json:"jenis_kendaraan" binding:"required"`
+		Warna          string `json:"warna"`
+	}
+
+	if err := c.ShouldBindJSON(&input); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"status": "error", "message": err.Error()})
+		return
+	}
+
+	if err := a.UserUsecase.UpdateKendaraan(userID, input.IDKendaraan, input.NomorPolisi, input.JenisKendaraan, input.Warna); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"status": "error", "message": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"status":  "success",
+		"message": "Kendaraan berhasil diperbarui",
 	})
 }
 

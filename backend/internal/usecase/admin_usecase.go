@@ -24,6 +24,10 @@ func NewAdminUsecase(repo domain.AdminRepository, wsHub domain.WSHub) domain.Adm
 	}
 }
 
+func (u *adminUsecase) GetUserByID(userID uint) (*domain.User, error) {
+	return u.adminRepo.GetUserByID(userID)
+}
+
 func (u *adminUsecase) GetDashboardData() (*domain.DashboardStats, error) {
 	return u.adminRepo.GetDashboardStats()
 }
@@ -78,6 +82,10 @@ func (u *adminUsecase) UpdateUserStatus(userID uint, newStatus string) error {
 
 func (u *adminUsecase) GetBlacklist() ([]domain.BlacklistItem, error) {
 	return u.adminRepo.GetBlacklistedUsers()
+}
+
+func (u *adminUsecase) GetBlacklistStats() (*domain.BlacklistStats, error) {
+	return u.adminRepo.GetBlacklistStats()
 }
 
 func (u *adminUsecase) ForceExitActivity(activityID uint) error {
@@ -135,34 +143,33 @@ func (u *adminUsecase) RemovePenalty(userID uint) error {
 
 // ─── Zone CRUD ──────────────────────────────────────────────────────────────
 
-// CreateZone ensures there is no duplicate name and capacity is valid.
-func (u *adminUsecase) CreateZone(namaZona string, deskripsi string, kapasitas int, jenisKendaraan string) error {
+func (u *adminUsecase) CreateZone(namaZona string, deskripsi string, kapasitasMotor int, kapasitasMobil int) (uint, error) {
 	namaZona = strings.TrimSpace(namaZona)
 	if namaZona == "" {
-		return errors.New("nama zona tidak boleh kosong")
+		return 0, errors.New("nama zona tidak boleh kosong")
 	}
-	if kapasitas <= 0 {
-		return errors.New("kapasitas zona harus lebih besar dari 0")
+	if kapasitasMotor < 0 || kapasitasMobil < 0 {
+		return 0, errors.New("kapasitas zona tidak boleh negatif")
 	}
 
 	// Duplicate name check
 	existing, _ := u.adminRepo.FindZoneByName(namaZona)
 	if existing != nil {
-		return fmt.Errorf("zona dengan nama '%s' sudah ada", namaZona)
+		return 0, fmt.Errorf("zona dengan nama '%s' sudah ada", namaZona)
 	}
 
 	zone := &domain.ZonaParkir{
 		NamaZona:       namaZona,
 		Deskripsi:      deskripsi,
-		Kapasitas:      kapasitas,
-		JenisKendaraan: jenisKendaraan,
+		KapasitasMotor: kapasitasMotor,
+		KapasitasMobil: kapasitasMobil,
 		Status:         "active",
 	}
 	err := u.adminRepo.CreateZone(zone)
 	if err == nil && u.wsHub != nil {
 		u.wsHub.NotifyLayoutUpdate()
 	}
-	return err
+	return zone.IDZona, err
 }
 
 func (u *adminUsecase) GetAllZones() ([]domain.ZoneWithSlots, error) {
@@ -170,7 +177,7 @@ func (u *adminUsecase) GetAllZones() ([]domain.ZoneWithSlots, error) {
 }
 
 // UpdateZone validates before delegating to repository.
-func (u *adminUsecase) UpdateZone(zonaID uint, namaZona string, deskripsi string, kapasitas int, jenisKendaraan string) error {
+func (u *adminUsecase) UpdateZone(zonaID uint, namaZona string, deskripsi string, kapasitasMotor int, kapasitasMobil int) error {
 	if zonaID == 0 {
 		return errors.New("zona ID tidak valid")
 	}
@@ -178,8 +185,8 @@ func (u *adminUsecase) UpdateZone(zonaID uint, namaZona string, deskripsi string
 	if namaZona == "" {
 		return errors.New("nama zona tidak boleh kosong")
 	}
-	if kapasitas <= 0 {
-		return errors.New("kapasitas zona harus lebih besar dari 0")
+	if kapasitasMotor < 0 || kapasitasMobil < 0 {
+		return errors.New("kapasitas zona tidak boleh negatif")
 	}
 
 	// Duplicate name check (exclude self)
@@ -192,8 +199,8 @@ func (u *adminUsecase) UpdateZone(zonaID uint, namaZona string, deskripsi string
 		IDZona:         zonaID,
 		NamaZona:       namaZona,
 		Deskripsi:      deskripsi,
-		Kapasitas:      kapasitas,
-		JenisKendaraan: jenisKendaraan,
+		KapasitasMotor: kapasitasMotor,
+		KapasitasMobil: kapasitasMobil,
 	}
 	err := u.adminRepo.UpdateZone(zone)
 	if err == nil && u.wsHub != nil {
@@ -244,4 +251,50 @@ func (u *adminUsecase) DeleteSlot(slotID uint) error {
 		return errors.New("slot ID tidak valid")
 	}
 	return u.adminRepo.DeleteSlot(slotID)
+}
+
+func (u *adminUsecase) GetPendingLaporan() ([]domain.PendingLaporanItem, error) {
+	return u.adminRepo.GetPendingLaporan()
+}
+
+func (u *adminUsecase) GetLaporanDetail(id uint) (*domain.LaporanDetail, error) {
+	return u.adminRepo.GetLaporanDetail(id)
+}
+
+func (u *adminUsecase) ApproveLaporan(laporanID uint, poin int, pelanggaran string) error {
+	if poin <= 0 {
+		return errors.New("poin harus lebih besar dari 0")
+	}
+	if pelanggaran == "" {
+		return errors.New("jenis pelanggaran wajib diisi")
+	}
+	return u.adminRepo.ApproveLaporan(laporanID, poin, pelanggaran)
+}
+
+func (u *adminUsecase) RejectLaporan(laporanID uint) error {
+	return u.adminRepo.RejectLaporan(laporanID)
+}
+
+func (u *adminUsecase) CreateLaporan(petugasID uint, targetIdentifier, jenisKendaraan, deskripsi, buktiFoto string) error {
+	if targetIdentifier == "" {
+		return errors.New("target identifier wajib diisi")
+	}
+	laporan := &domain.LaporanPetugas{
+		IDPetugas:            petugasID,
+		TargetIdentifier:     targetIdentifier,
+		DeskripsiPelanggaran: deskripsi,
+		BuktiFoto:            buktiFoto,
+		Status:               "pending",
+	}
+	return u.adminRepo.CreateLaporan(laporan, jenisKendaraan)
+}
+
+func (u *adminUsecase) UpdateUserAdmin(userID uint, nama, nim string, roleID uint, status, nomorPolisi, jenisKendaraan string) error {
+	if nama == "" {
+		return errors.New("nama wajib diisi")
+	}
+	if status == "" {
+		status = "active"
+	}
+	return u.adminRepo.UpdateUserAdmin(userID, nama, nim, roleID, status, nomorPolisi, jenisKendaraan)
 }

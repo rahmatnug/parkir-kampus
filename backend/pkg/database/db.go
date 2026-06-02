@@ -45,6 +45,7 @@ func ConnectDB() *gorm.DB {
 		&domain.WaitingList{},
 		&domain.Penalti{},
 		&domain.Blacklist{},
+		&domain.LaporanPetugas{},
 	)
 	if err != nil {
 		log.Fatalf("Failed to automigrate: %v", err)
@@ -61,15 +62,16 @@ func ConnectDB() *gorm.DB {
 func SeedData(db *gorm.DB) {
 	roles := []domain.Role{
 		{ID: 1, NamaRole: "admin", Prioritas: 1},
-		{ID: 2, NamaRole: "dosen", Prioritas: 2},
-		{ID: 3, NamaRole: "mahasiswa", Prioritas: 3},
-		{ID: 4, NamaRole: "staff", Prioritas: 4},
-		{ID: 5, NamaRole: "tamu", Prioritas: 5},
+		{ID: 2, NamaRole: "petugas", Prioritas: 2},
+		{ID: 3, NamaRole: "tamu", Prioritas: 1}, // Tertinggi
+		{ID: 4, NamaRole: "dosen", Prioritas: 2},
+		{ID: 5, NamaRole: "staff", Prioritas: 2},
+		{ID: 6, NamaRole: "mahasiswa", Prioritas: 3}, // Terendah
 	}
 
 	for _, role := range roles {
-		// Use FirstOrCreate to ensure we don't duplicate
-		db.Where(domain.Role{NamaRole: role.NamaRole}).FirstOrCreate(&role)
+		// Gunakan Assign agar meng-update jika ID sudah ada (menghindari duplikasi)
+		db.Where(domain.Role{ID: role.ID}).Assign(domain.Role{NamaRole: role.NamaRole, Prioritas: role.Prioritas}).FirstOrCreate(&role)
 	}
 
 	// Default Admin User
@@ -84,34 +86,52 @@ func SeedData(db *gorm.DB) {
 
 	db.Where(domain.User{Email: adminUser.Email}).FirstOrCreate(&adminUser)
 
+	// Petugas User
+	petugasUser := domain.User{
+		RoleID:       2, // petugas
+		Nama:         "Bapak Sukamto (Petugas)",
+		Email:        "petugas.lapangan@parkirkampus.ac.id",
+		PasswordHash: string(hashedPassword),
+		Status:       "active",
+	}
+	db.Where(domain.User{Email: petugasUser.Email}).FirstOrCreate(&petugasUser)
+
 	// Seed Dummy Users
 	mahasiswaUser := domain.User{
-		RoleID:       3,
+		RoleID:       6, // mahasiswa
 		Nama:         "Budi Santoso",
 		Email:        "budi@univ.ac.id",
 		PasswordHash: string(hashedPassword),
 		Status:       "active",
 	}
-	db.Where(domain.User{Email: mahasiswaUser.Email}).FirstOrCreate(&mahasiswaUser)
+	// Pastikan terupdate rolenya
+	db.Where(domain.User{Email: mahasiswaUser.Email}).Assign(domain.User{RoleID: 6}).FirstOrCreate(&mahasiswaUser)
 
 	dosenUser := domain.User{
-		RoleID:       2,
+		RoleID:       4, // dosen
 		Nama:         "Dr. Hendra",
 		Email:        "hendra@univ.ac.id",
 		PasswordHash: string(hashedPassword),
 		Status:       "active",
 	}
-	db.Where(domain.User{Email: dosenUser.Email}).FirstOrCreate(&dosenUser)
+	db.Where(domain.User{Email: dosenUser.Email}).Assign(domain.User{RoleID: 4}).FirstOrCreate(&dosenUser)
 
 	// Seed Zoning
 	zones := []domain.ZonaParkir{
-		{IDZona: 1, NamaZona: "Zone A", Deskripsi: "Parkir Utama Depan", Kapasitas: 50, Status: "active"},
-		{IDZona: 2, NamaZona: "Zone B", Deskripsi: "Parkir Gedung B", Kapasitas: 40, Status: "active"},
-		{IDZona: 3, NamaZona: "Zone C", Deskripsi: "Parkir Belakang", Kapasitas: 30, Status: "active"},
+		{IDZona: 1, NamaZona: "Zone A", Deskripsi: "Parkir Utama Depan", KapasitasMotor: 30, KapasitasMobil: 20, Status: "active"},
+		{IDZona: 2, NamaZona: "Zone B", Deskripsi: "Parkir Gedung B", KapasitasMotor: 25, KapasitasMobil: 15, Status: "active"},
+		{IDZona: 3, NamaZona: "Zone C", Deskripsi: "Parkir Belakang", KapasitasMotor: 20, KapasitasMobil: 10, Status: "active"},
 	}
 	for i, z := range zones {
 		db.Where(domain.ZonaParkir{NamaZona: z.NamaZona}).FirstOrCreate(&zones[i])
 	}
+
+	// Force set zone capacities (Seeding Hybrid Zones)
+	db.Exec("UPDATE zona_parkirs SET kapasitas_motor = 50, kapasitas_mobil = 10 WHERE id_zona = 1")
+	db.Exec("UPDATE zona_parkirs SET kapasitas_motor = 40, kapasitas_mobil = 10 WHERE id_zona = 2")
+	db.Exec("UPDATE zona_parkirs SET kapasitas_motor = 30, kapasitas_mobil = 10 WHERE id_zona = 3")
+	db.Exec("UPDATE zona_parkirs SET kapasitas_motor = 20, kapasitas_mobil = 10 WHERE id_zona = 4")
+	db.Exec("UPDATE zona_parkirs SET kapasitas_motor = 25, kapasitas_mobil = 10 WHERE id_zona = 5")
 
 	// Seed Slots with spatial coordinates for dynamic map rendering
 	type slotSeed struct {

@@ -6,6 +6,8 @@ import 'presentation/pages/user_auth_page.dart';
 import 'presentation/pages/dashboard_page.dart';
 import 'presentation/pages/user_home_page.dart';
 import 'package:frontend/presentation/pages/admin_splash_screen.dart';
+import 'presentation/pages/petugas_report_page.dart';
+import 'presentation/pages/user_diblokir_page.dart';
 import 'core/network/api_client.dart';
 
 void main() {
@@ -96,9 +98,17 @@ class _AuthGateState extends State<AuthGate> {
 
     if (status == AuthStatus.authenticated) {
       final idRole = context.watch<AuthProvider>().idRole;
+      final isBlacklisted = context.watch<AuthProvider>().isBlacklisted;
+      final penaltyPoints = context.watch<AuthProvider>().penaltyPoints;
+
       if (idRole == 1) {
         return const DashboardPage();
+      } else if (idRole == 2) {
+        return const PetugasReportPage();
       } else {
+        if (isBlacklisted || penaltyPoints >= 100) {
+          return const UserDiblokirPage();
+        }
         return const UserHomePage();
       }
     }

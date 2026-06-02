@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"strings"
 	"time"
 
 	"github.com/rahmatnug/parkir-kampus-backend/internal/domain"
@@ -154,25 +155,79 @@ func (r *adminRepository) UpdateUserStatus(userID uint, status string) error {
 		Update("status", status).Error
 }
 
+// RejectLaporan updates the report status to rejected.
+func (r *adminRepository) RejectLaporan(laporanID uint) error {
+	return r.db.Model(&domain.LaporanPetugas{}).
+		Where("id_laporan = ?", laporanID).
+		Update("status", "rejected").Error
+}
+
 // GetBlacklistedUsers returns users with cumulative penalty >= 30 points
 func (r *adminRepository) GetBlacklistedUsers() ([]domain.BlacklistItem, error) {
 	var items []domain.BlacklistItem
 
-	err := r.db.Table("penaltis").
-		Select("penaltis.id_user as user_id, users.nama as name, users.email, COALESCE(roles.nama_role, 'Unassigned') as role, SUM(penaltis.poin_penalti) as total_poin, COUNT(penaltis.id_penalti) as jumlah_kasus, MAX(penaltis.jenis_pelanggaran) as alasan_terakhir, MAX(kendaraans.nomor_polisi) as nomor_polisi, CASE WHEN SUM(penaltis.poin_penalti) >= 50 THEN 'Blocked' ELSE 'Suspended' END as status_hukuman").
-		Joins("left join users on users.id_user = penaltis.id_user").
-		Joins("left join roles on roles.id_role = users.id_role").
-		Joins("left join kendaraans on kendaraans.id_user = users.id_user").
-		Group("penaltis.id_user, users.nama, users.email, roles.nama_role").
-		Having("SUM(penaltis.poin_penalti) >= ?", 30).
-		Order("total_poin DESC").
-		Scan(&items).Error
+	query := `
+		SELECT 
+			u.nama AS nama_user, 
+			u.nim AS nim, 
+			COALESCE(u.profile_image_url, '') AS avatar_url, 
+			COALESCE(r.nama_role, 'Unassigned') AS nama_role, 
+			COALESCE((
+				SELECT nomor_polisi 
+				FROM kendaraans k2 
+				WHERE k2.id_user = u.id_user 
+				ORDER BY created_at DESC 
+				LIMIT 1
+			), '-') AS nomor_polisi, 
+			COALESCE(SUM(p.poin_penalti), 0) AS total_poin, 
+			COUNT(p.id_penalti) AS jumlah_kasus,
+			COALESCE((
+				SELECT CONCAT(p2.jenis_pelanggaran, ' (', DATE(p2.tanggal), ')') 
+				FROM penaltis p2 
+				WHERE p2.id_user = u.id_user 
+				ORDER BY p2.tanggal DESC 
+				LIMIT 1
+			), '-') AS pelanggaran_terakhir,
+			CASE 
+				WHEN SUM(p.poin_penalti) > 100 THEN 'CRITICAL' 
+				WHEN SUM(p.poin_penalti) >= 50 THEN 'WARNING' 
+				ELSE 'SAFE' 
+			END AS status_peringatan
+		FROM users u
+		LEFT JOIN roles r ON u.id_role = r.id_role
+		LEFT JOIN penaltis p ON u.id_user = p.id_user
+		LEFT JOIN blacklists b ON u.id_user = b.id_user
+		GROUP BY u.id_user, u.nama, u.nim, u.profile_image_url, r.nama_role, u.status
+		HAVING SUM(p.poin_penalti) >= 1 OR u.status = 'blocked' OR MAX(CASE WHEN b.status = 'active' THEN 1 ELSE 0 END) = 1
+		ORDER BY total_poin DESC
+	`
 
+	rows, err := r.db.Raw(query).Rows()
 	if err != nil {
 		return nil, err
 	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var item domain.BlacklistItem
+		if err := r.db.ScanRows(rows, &item); err != nil {
+			return nil, err
+		}
+		items = append(items, item)
+	}
 
 	return items, nil
+}
+
+func (r *adminRepository) GetBlacklistStats() (*domain.BlacklistStats, error) {
+	var stats domain.BlacklistStats
+	var active int64
+	var total int64
+	r.db.Model(&domain.Blacklist{}).Where("status = ?", "active").Count(&active)
+	r.db.Model(&domain.User{}).Where("status = ?", "blacklist").Count(&total)
+	stats.ActiveRestrictions = int(active)
+	stats.TotalBlacklisted = int(total)
+	return &stats, nil
 }
 
 // ForceExitActivity manually ends a parking transaction and frees the slot
@@ -284,7 +339,8 @@ func (r *adminRepository) UpdateZone(zone *domain.ZonaParkir) error {
 		Updates(map[string]interface{}{
 			"nama_zona": zone.NamaZona,
 			"deskripsi": zone.Deskripsi,
-			"kapasitas": zone.Kapasitas,
+			"kapasitas_motor": zone.KapasitasMotor,
+			"kapasitas_mobil": zone.KapasitasMobil,
 		}).Error
 }
 
@@ -352,5 +408,236 @@ func (r *adminRepository) DeleteSlot(slotID uint) error {
 		}
 
 		return tx.Delete(&domain.SlotParkir{}, "id_slot = ?", slotID).Error
+	})
+}
+
+// GetPendingLaporan retrieves all pending field reports
+func (r *adminRepository) GetPendingLaporan() ([]domain.PendingLaporanItem, error) {
+	var results []domain.PendingLaporanItem
+	var laporans []domain.LaporanPetugas
+
+	err := r.db.Preload("Petugas").
+		Where("status IN ?", []string{"pending", "menunggu review"}).
+		Order("created_at DESC").
+		Find(&laporans).Error
+	if err != nil {
+		return nil, err
+	}
+
+	for _, l := range laporans {
+		results = append(results, domain.PendingLaporanItem{
+			IDLaporan:       l.IDLaporan,
+			TipePelanggaran: l.DeskripsiPelanggaran,
+			NomorPolisi:     l.TargetIdentifier,
+			NamaPetugas:     l.Petugas.Nama,
+			CreatedAt:       l.CreatedAt,
+		})
+	}
+	return results, nil
+}
+
+// GetLaporanDetail fetches a report with its creator and resolves the target user/kendaraan.
+func (r *adminRepository) GetLaporanDetail(id uint) (*domain.LaporanDetail, error) {
+	var laporan domain.LaporanPetugas
+	if err := r.db.Preload("Petugas").First(&laporan, id).Error; err != nil {
+		return nil, err
+	}
+
+	detail := &domain.LaporanDetail{Laporan: laporan}
+
+	// Try to resolve target_identifier
+	var targetUser domain.User
+
+	if laporan.TargetUserID != nil {
+		err := r.db.Preload("Kendaraans", func(db *gorm.DB) *gorm.DB {
+			return db.Order("created_at DESC")
+		}).Preload("Role").First(&targetUser, *laporan.TargetUserID).Error
+		if err == nil {
+			detail.Target = &targetUser
+		}
+	} else {
+		// Fallback for old reports without TargetUserID
+		ident := strings.ToLower(strings.ReplaceAll(laporan.TargetIdentifier, " ", ""))
+		err := r.db.Unscoped().Preload("Kendaraans", func(db *gorm.DB) *gorm.DB {
+			return db.Order("created_at DESC")
+		}).Preload("Role").
+			Joins("LEFT JOIN kendaraans ON kendaraans.id_user = users.id_user").
+			Where("LOWER(REPLACE(users.nim, ' ', '')) = ? OR LOWER(REPLACE(kendaraans.nomor_polisi, ' ', '')) = ?", ident, ident).
+			First(&targetUser).Error
+		if err == nil {
+			detail.Target = &targetUser
+		}
+	}
+
+	if detail.Target != nil {
+		var penalties []domain.Penalti
+		r.db.Where("id_user = ?", detail.Target.ID).Order("tanggal DESC").Find(&penalties)
+		detail.Target.RiwayatPelanggaran = penalties
+		
+		var totalPoin int
+		r.db.Model(&domain.Penalti{}).Where("id_user = ?", detail.Target.ID).Select("COALESCE(SUM(poin_penalti), 0)").Row().Scan(&totalPoin)
+		detail.Target.TotalPoin = totalPoin
+	}
+
+	return detail, nil
+}
+
+// GetUserByID fetches a single user with their kendaraans preloaded.
+func (r *adminRepository) GetUserByID(userID uint) (*domain.User, error) {
+	var user domain.User
+	err := r.db.Preload("Kendaraans", func(db *gorm.DB) *gorm.DB {
+		return db.Order("created_at DESC")
+	}).Preload("Role").
+		Where("id_user = ?", userID).
+		First(&user).Error
+	if err != nil {
+		return nil, err
+	}
+	return &user, nil
+}
+
+// CreateLaporan saves a new LaporanPetugas.
+func (r *adminRepository) CreateLaporan(laporan *domain.LaporanPetugas, jenisKendaraan string) error {
+	var targetUser domain.User
+	ident := strings.ToLower(strings.ReplaceAll(laporan.TargetIdentifier, " ", ""))
+	
+	query := r.db.Unscoped().Joins("LEFT JOIN kendaraans ON kendaraans.id_user = users.id_user").
+		Where("LOWER(REPLACE(kendaraans.nomor_polisi, ' ', '')) = ?", ident)
+
+	if jenisKendaraan != "" {
+		query = query.Where("LOWER(kendaraans.jenis_kendaraan) = ?", strings.ToLower(jenisKendaraan))
+	}
+
+	err := query.First(&targetUser).Error
+	if err == nil {
+		laporan.TargetUserID = &targetUser.ID
+	}
+	return r.db.Create(laporan).Error
+}
+
+// UpdateUserAdmin updates user, vehicle and status in one transaction.
+// If status == "blocked", also inserts a blacklist record.
+// If status == "active", also removes any existing blacklist records.
+func (r *adminRepository) UpdateUserAdmin(userID uint, nama, nim string, roleID uint, status, nomorPolisi, jenisKendaraan string) error {
+	return r.db.Transaction(func(tx *gorm.DB) error {
+		// 1. Update user table
+		if err := tx.Model(&domain.User{}).Where("id_user = ?", userID).Updates(map[string]interface{}{
+			"nama":    nama,
+			"nim":     nim,
+			"id_role": roleID,
+			"status":  status,
+		}).Error; err != nil {
+			return err
+		}
+
+		// 2. Sync blacklists table
+		if status == "blocked" {
+			// Hapus riwayat penalti lama
+			if err := tx.Where("id_user = ?", userID).Delete(&domain.Penalti{}).Error; err != nil {
+				return err
+			}
+			// Insert 100 poin override
+  			if err := tx.Create(&domain.Penalti{
+  				UserID:           userID,
+  				JenisPelanggaran: "Manual Blacklist by Admin",
+  				PoinPenalti:      100,
+  				Tanggal:          time.Now(),
+  			}).Error; err != nil {
+				return err
+			}
+
+			// Check if blacklist record already exists
+			var count int64
+			tx.Model(&domain.Blacklist{}).Where("id_user = ? AND status = ?", userID, "active").Count(&count)
+			if count == 0 {
+				bl := domain.Blacklist{
+					UserID:       userID,
+					Alasan:       "Manual Override by Admin",
+					TanggalMulai: time.Now(),
+					Status:       "active",
+				}
+				if err := tx.Create(&bl).Error; err != nil {
+					return fmt.Errorf("gagal membuat blacklist: %w", err)
+				}
+			}
+		} else if status == "active" {
+			// Hapus riwayat penalti agar poin jadi 0
+			if err := tx.Where("id_user = ?", userID).Delete(&domain.Penalti{}).Error; err != nil {
+				return err
+			}
+			// Hapus record blacklist
+			if err := tx.Where("id_user = ?", userID).Delete(&domain.Blacklist{}).Error; err != nil {
+				return fmt.Errorf("gagal hapus blacklist: %w", err)
+			}
+		}
+
+		// 3. Create vehicle history if new
+		if nomorPolisi != "" {
+			var count int64
+			tx.Model(&domain.Kendaraan{}).Where("nomor_polisi = ?", nomorPolisi).Count(&count)
+			if count == 0 {
+				// Soft delete kendaraan lama
+				tx.Where("id_user = ?", userID).Delete(&domain.Kendaraan{})
+
+				newKendaraan := domain.Kendaraan{
+					UserID:         userID,
+					NomorPolisi:    nomorPolisi,
+					JenisKendaraan: jenisKendaraan,
+				}
+				if err := tx.Create(&newKendaraan).Error; err != nil {
+					return err
+				}
+			}
+		}
+
+		return nil
+	})
+}
+// ApproveLaporan updates the report status and adds a penalty to the target user.
+func (r *adminRepository) ApproveLaporan(laporanID uint, poin int, pelanggaran string) error {
+	return r.db.Transaction(func(tx *gorm.DB) error {
+		var laporan domain.LaporanPetugas
+		if err := tx.First(&laporan, laporanID).Error; err != nil {
+			return err
+		}
+
+		if laporan.Status != "pending" {
+			return errors.New("laporan sudah diproses")
+		}
+
+		// Find target user
+		var targetUser domain.User
+		if laporan.TargetUserID != nil {
+			if err := tx.First(&targetUser, *laporan.TargetUserID).Error; err != nil {
+				return errors.New("target pengguna tidak ditemukan berdasarkan ID")
+			}
+		} else {
+			ident := strings.ToLower(strings.ReplaceAll(laporan.TargetIdentifier, " ", ""))
+			err := tx.Unscoped().Joins("LEFT JOIN kendaraans ON kendaraans.id_user = users.id_user").
+				Where("LOWER(REPLACE(users.nim, ' ', '')) = ? OR LOWER(REPLACE(kendaraans.nomor_polisi, ' ', '')) = ?", ident, ident).
+				First(&targetUser).Error
+
+			if err != nil {
+				return errors.New("target pengguna tidak ditemukan berdasarkan identifier")
+			}
+		}
+
+		// Add penalty
+		penalti := domain.Penalti{
+			UserID:           targetUser.ID,
+			PoinPenalti:      poin,
+			JenisPelanggaran: pelanggaran,
+			Tanggal:          time.Now(),
+		}
+		if err := tx.Create(&penalti).Error; err != nil {
+			return err
+		}
+
+		// Update report status
+		if err := tx.Model(&laporan).Update("status", "approved").Error; err != nil {
+			return err
+		}
+
+		return nil
 	})
 }

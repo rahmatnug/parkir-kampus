@@ -1,5 +1,4 @@
 import 'dart:ui';
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -79,7 +78,7 @@ class _PetugasReportPageState extends State<PetugasReportPage> {
   String? _selectedKategori;
   String? _selectedZona;
   String? _uploadedFileName;
-  File? _imageFile;
+  Uint8List? _imageBytes;
   bool _isSubmitting = false;
 
   final ImagePicker _picker = ImagePicker();
@@ -136,8 +135,7 @@ class _PetugasReportPageState extends State<PetugasReportPage> {
       );
 
       if (image != null) {
-        final File file = File(image.path);
-        final int sizeInBytes = await file.length();
+        final int sizeInBytes = await image.length();
         final double sizeInMb = sizeInBytes / (1024 * 1024);
 
         if (sizeInMb > 5.0) {
@@ -152,9 +150,11 @@ class _PetugasReportPageState extends State<PetugasReportPage> {
           return;
         }
 
+        final bytes = await image.readAsBytes();
+
         setState(() {
-          _imageFile = file;
           _uploadedFileName = image.name;
+          _imageBytes = bytes;
         });
 
         ScaffoldMessenger.of(context).showSnackBar(
@@ -196,7 +196,7 @@ class _PetugasReportPageState extends State<PetugasReportPage> {
       _selectedKategori = null;
       _selectedZona = null;
       _uploadedFileName = null;
-      _imageFile = null;
+      _imageBytes = null;
     });
   }
 
@@ -257,13 +257,19 @@ class _PetugasReportPageState extends State<PetugasReportPage> {
         'kategori': _selectedKategori,
         'deskripsi': _descCtrl.text.trim(),
         'zona': _selectedZona,
-        'bukti_foto': await dio_pkg.MultipartFile.fromFile(
-          _imageFile!.path,
+        'bukti_foto': dio_pkg.MultipartFile.fromBytes(
+          _imageBytes!,
           filename: _uploadedFileName,
         ),
       });
 
-      await dio.post('/api/v1/report', data: formData);
+      await dio.post(
+        '/api/v1/report', 
+        data: formData,
+        options: dio_pkg.Options(
+          contentType: 'multipart/form-data',
+        ),
+      );
 
       if (!mounted) return;
 
@@ -275,7 +281,7 @@ class _PetugasReportPageState extends State<PetugasReportPage> {
               SizedBox(width: 12),
               Expanded(
                 child: Text(
-                  'Laporan Pelanggaran Berhasil Dikirim & Masuk Antrean Persetujuan.',
+                  'Laporan Berhasil Dikirim!',
                   style: TextStyle(fontWeight: FontWeight.w600),
                 ),
               ),
@@ -715,7 +721,17 @@ class _PetugasReportPageState extends State<PetugasReportPage> {
                                 ),
                               ),
                             ),
-                            if (_uploadedFileName != null) ...[
+                            if (_uploadedFileName != null && _imageBytes != null) ...[
+                              const SizedBox(height: 12),
+                              ClipRRect(
+                                borderRadius: BorderRadius.circular(12),
+                                child: Image.memory(
+                                  _imageBytes!,
+                                  height: 200,
+                                  width: double.infinity,
+                                  fit: BoxFit.cover,
+                                ),
+                              ),
                               const SizedBox(height: 12),
                               Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -754,6 +770,7 @@ class _PetugasReportPageState extends State<PetugasReportPage> {
                                       onPressed: () {
                                         setState(() {
                                           _uploadedFileName = null;
+                                          _imageBytes = null;
                                         });
                                       },
                                     ),

@@ -12,6 +12,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:intl/intl.dart';
+import 'dart:async' show Timer;
 
 // â”€â”€â”€ String Extension â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 extension StringCapitalize on String {
@@ -20,9 +21,8 @@ extension StringCapitalize on String {
 }
 // ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Availability Helpers ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
 Color _availColor(ParkingZone z) {
-  double ratio = z.kapasitasMaksimal > 0 ? z.terisiSaatIni.toDouble() / z.kapasitasMaksimal.toDouble() : 0.0;
-  if (ratio >= 1.0) return const Color(0xFFEF4444);
-  if (ratio >= 0.75) return const Color(0xFFF97316);
+  if (z.isFull) return const Color(0xFFEF4444);
+  if (z.isFullMotor || z.isFullMobil) return const Color(0xFFF97316);
   return const Color(0xFF22C55E);
 }
 
@@ -38,6 +38,7 @@ class UserHomePage extends StatefulWidget {
 class _UserHomePageState extends State<UserHomePage> {
   int _selectedTab = 0;
   late PageController _pageController;
+  Timer? _pollingTimer;
 
   @override
   void initState() {
@@ -50,10 +51,17 @@ class _UserHomePageState extends State<UserHomePage> {
       provider.fetchParkingStatus();
       if (token != null) provider.initializeWebSocket(token);
     });
+
+    _pollingTimer = Timer.periodic(const Duration(seconds: 5), (_) {
+      if (mounted) {
+        context.read<ParkingProvider>().fetchParkingStatus(silent: true);
+      }
+    });
   }
 
   @override
   void dispose() {
+    _pollingTimer?.cancel();
     _pageController.dispose();
     context.read<ParkingProvider>().disconnectWebSocket();
     super.dispose();
@@ -294,7 +302,7 @@ class _HomeTab extends StatelessWidget {
               ])),
             const SizedBox(height: 20),
 
-            // ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Interactive Map ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
+            // ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ Interactive Map ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Container(
@@ -330,7 +338,7 @@ class _HomeTab extends StatelessWidget {
             ),
             const SizedBox(height: 24),
 
-            // ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Zone Header ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
+            // ——— Zone Header ———
             Padding(padding: const EdgeInsets.symmetric(horizontal: 20),
               child: Row(children: [
                 const Text('Parking Zones', style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
@@ -339,7 +347,7 @@ class _HomeTab extends StatelessWidget {
               ])),
             const SizedBox(height: 12),
 
-            // ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Zone Cards ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
+            // ——— Zone Cards ———
             if (loading)
               const Padding(padding: EdgeInsets.all(40), child: Center(child: CircularProgressIndicator(color: Color(0xFF2563EB))))
             else if (zones.isEmpty)
@@ -369,7 +377,7 @@ class _InteractivePin extends StatelessWidget {
   const _InteractivePin({required this.zone});
   @override
   Widget build(BuildContext context) {
-    final c = _availColor(zone);
+    final c = zone.isFull ? const Color(0xFFEF4444) : const Color(0xFF22C55E);
     return Container(width: 38, height: 38,
       decoration: BoxDecoration(color: c, shape: BoxShape.circle,
         border: Border.all(color: Colors.white, width: 2.5),
@@ -388,8 +396,8 @@ class _ZoneCard extends StatefulWidget {
 
 class _ZoneCardState extends State<_ZoneCard> with SingleTickerProviderStateMixin {
   late AnimationController _pulseAnim;
-  double _prevProgress = -1;
-  int _prevTersedia = -1;
+  int _prevTerpakaiMotor = -1;
+  int _prevTerpakaiMobil = -1;
 
   @override
   void initState() {
@@ -398,21 +406,21 @@ class _ZoneCardState extends State<_ZoneCard> with SingleTickerProviderStateMixi
       vsync: this,
       duration: const Duration(milliseconds: 500),
     );
-    final z = widget.zone;
-    _prevProgress = z.kapasitasMaksimal > 0
-        ? z.terisiSaatIni.toDouble() / z.kapasitasMaksimal.toDouble()
-        : 0.0;
-    _prevTersedia = z.terisiSaatIni;
+    _prevTerpakaiMotor = widget.zone.terpakaiMotor;
+    _prevTerpakaiMobil = widget.zone.terpakaiMobil;
   }
 
   @override
   void didUpdateWidget(covariant _ZoneCard old) {
     super.didUpdateWidget(old);
-    final newTerisi = widget.zone.terisiSaatIni;
-    if (_prevTersedia != -1 && newTerisi != _prevTersedia) {
+    final newMotor = widget.zone.terpakaiMotor;
+    final newMobil = widget.zone.terpakaiMobil;
+    if ((_prevTerpakaiMotor != -1 && newMotor != _prevTerpakaiMotor) ||
+        (_prevTerpakaiMobil != -1 && newMobil != _prevTerpakaiMobil)) {
       _pulseAnim.forward().then((_) => _pulseAnim.reverse());
     }
-    _prevTersedia = newTerisi;
+    _prevTerpakaiMotor = newMotor;
+    _prevTerpakaiMobil = newMobil;
   }
 
   @override
@@ -424,21 +432,16 @@ class _ZoneCardState extends State<_ZoneCard> with SingleTickerProviderStateMixi
   @override
   Widget build(BuildContext context) {
     final z = widget.zone;
-    // Hitung progressValue dari data real
-    final double currentProgress = z.kapasitasMaksimal > 0
-        ? (z.terisiSaatIni.toDouble() / z.kapasitasMaksimal.toDouble()).clamp(0.0, 1.0)
-        : 0.0;
-
-    // Tentukan warna & label berdasarkan occupancy ratio
+    
     final Color statusColor;
     final String statusLabel;
     final Color bgColor;
 
-    if (currentProgress >= 1.0) {
+    if (z.isFull) {
       statusColor = const Color(0xFFEF4444); // Merah
       statusLabel = 'Penuh';
       bgColor = const Color(0xFFFFE4E6);
-    } else if (currentProgress >= 0.75) {
+    } else if (z.isFullMotor || z.isFullMobil) {
       statusColor = const Color(0xFFF97316); // Orange
       statusLabel = 'Hampir Penuh';
       bgColor = const Color(0xFFFEF3C7);
@@ -447,13 +450,6 @@ class _ZoneCardState extends State<_ZoneCard> with SingleTickerProviderStateMixi
       statusLabel = 'Tersedia';
       bgColor = const Color(0xFFDCFCE7);
     }
-
-    // Simpan nilai sebelumnya untuk animasi tween
-    final double beginProgress = _prevProgress;
-    // Update _prevProgress setelah frame ini
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) _prevProgress = currentProgress;
-    });
 
     return Container(
       clipBehavior: Clip.antiAlias,
@@ -506,60 +502,45 @@ class _ZoneCardState extends State<_ZoneCard> with SingleTickerProviderStateMixi
                           style: TextStyle(
                             fontSize: 12, fontWeight: FontWeight.w500,
                             color: statusColor)),
-                        const SizedBox(width: 8),
-                        Icon(
-                          z.jenisKendaraan == 'mobil'
-                              ? Icons.directions_car_rounded
-                              : Icons.two_wheeler_rounded,
-                          size: 14, color: const Color(0xFF94A3B8)),
                       ]),
                     ],
                   ),
                 ),
-                // Angka terisi & progress bar
+                // Angka terisi
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    AnimatedBuilder(
-                      animation: _pulseAnim,
-                      builder: (_, __) => Text(
-                        '${z.terisiSaatIni}/${z.kapasitasMaksimal}',
-                        style: TextStyle(
-                          fontSize: 14, fontWeight: FontWeight.w800,
-                          color: _pulseAnim.isAnimating
-                              ? const Color(0xFF16A34A)
-                              : statusColor),
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    // Progress bar dengan tween dari nilai lama ke nilai baru
-                    SizedBox(
-                      width: 64,
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(4),
-                        child: TweenAnimationBuilder<double>(
-                          key: ValueKey('${z.id}_progress'),
-                          tween: Tween<double>(
-                            begin: beginProgress,
-                            end: currentProgress,
-                          ),
-                          duration: const Duration(milliseconds: 600),
-                          curve: Curves.easeOut,
-                          builder: (_, v, __) => LinearProgressIndicator(
-                            value: v,
-                            minHeight: 6,
-                            backgroundColor: const Color(0xFFE2E8F0),
-                            valueColor: AlwaysStoppedAnimation<Color>(
-                              v >= 1.0
-                                  ? const Color(0xFFEF4444)
-                                  : v >= 0.75
-                                      ? const Color(0xFFF97316)
-                                      : const Color(0xFF22C55E),
-                            ),
+                    Row(
+                      children: [
+                        Icon(Icons.two_wheeler_rounded, size: 14, color: z.isFullMotor ? Colors.redAccent : const Color(0xFF94A3B8)),
+                        const SizedBox(width: 4),
+                        AnimatedBuilder(
+                          animation: _pulseAnim,
+                          builder: (_, __) => Text(
+                            '${z.terpakaiMotor}/${z.kapasitasMotor}',
+                            style: TextStyle(
+                              fontSize: 12, fontWeight: FontWeight.w800,
+                              color: _pulseAnim.isAnimating ? const Color(0xFF16A34A) : (z.isFullMotor ? Colors.redAccent : const Color(0xFF64748B))),
                           ),
                         ),
-                      ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        Icon(Icons.directions_car_rounded, size: 14, color: z.isFullMobil ? Colors.redAccent : const Color(0xFF94A3B8)),
+                        const SizedBox(width: 4),
+                        AnimatedBuilder(
+                          animation: _pulseAnim,
+                          builder: (_, __) => Text(
+                            '${z.terpakaiMobil}/${z.kapasitasMobil}',
+                            style: TextStyle(
+                              fontSize: 12, fontWeight: FontWeight.w800,
+                              color: _pulseAnim.isAnimating ? const Color(0xFF16A34A) : (z.isFullMobil ? Colors.redAccent : const Color(0xFF64748B))),
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
@@ -798,6 +779,9 @@ class _ParkingTab extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 10),
+                  if (pp.assignedWaktuMasuk != null && pp.assignedWaktuMasuk!.isNotEmpty)
+                    _DurationText(waktuMasuk: pp.assignedWaktuMasuk!),
+                  const SizedBox(height: 16),
                   GestureDetector(
                     onTap: () => Navigator.push(
                       context,
@@ -840,6 +824,95 @@ class _ParkingTab extends StatelessWidget {
               ),
             ),
           },
+        ],
+      ),
+    );
+  }
+}
+
+class _DurationText extends StatefulWidget {
+  final String waktuMasuk;
+  const _DurationText({required this.waktuMasuk});
+
+  @override
+  State<_DurationText> createState() => _DurationTextState();
+}
+
+class _DurationTextState extends State<_DurationText> {
+  late DateTime _startTime;
+  String _durationStr = '00:00:00';
+  Timer? _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    _parseTime();
+    _startTimer();
+  }
+
+  @override
+  void didUpdateWidget(covariant _DurationText oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.waktuMasuk != widget.waktuMasuk) {
+      _parseTime();
+    }
+  }
+
+  void _parseTime() {
+    try {
+      _startTime = DateTime.parse(widget.waktuMasuk).toLocal();
+      _updateDuration();
+    } catch (_) {
+      _startTime = DateTime.now();
+    }
+  }
+
+  void _startTimer() {
+    _timer = Timer.periodic(const Duration(seconds: 1), (_) {
+      _updateDuration();
+    });
+  }
+
+  void _updateDuration() {
+    final diff = DateTime.now().difference(_startTime);
+    final hours = diff.inHours.toString().padLeft(2, '0');
+    final minutes = (diff.inMinutes % 60).toString().padLeft(2, '0');
+    final seconds = (diff.inSeconds % 60).toString().padLeft(2, '0');
+    if (mounted) {
+      setState(() {
+        _durationStr = '$hours:$minutes:$seconds';
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.timer_outlined, color: Color(0xFF2563EB), size: 18),
+          const SizedBox(width: 8),
+          Text(
+            _durationStr,
+            style: const TextStyle(
+              color: Color(0xFF2563EB),
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              // Cannot use FontFeature if not imported, so omitting.
+            ),
+          ),
         ],
       ),
     );
@@ -1015,12 +1088,15 @@ class _AlertsTabState extends State<_AlertsTab> {
                         ],
                       ),
                     )
-                  : ListView.builder(
-                      padding: const EdgeInsets.all(16),
+                  : RefreshIndicator(
+                      onRefresh: _fetchAlerts,
+                      color: const Color(0xFF2563EB),
+                      child: ListView.builder(
+                        padding: const EdgeInsets.all(16),
                       itemCount: _alerts.length,
                       itemBuilder: (ctx, i) {
                         final a = _alerts[i];
-                        final fmt = DateFormat('dd MMM yyyy, HH:mm');
+                        final fmt = DateFormat("dd MMM yyyy, HH:mm 'WIB'");
                         final t = DateTime.parse(a['tanggal']).toLocal();
                         return Container(
                           padding: const EdgeInsets.all(16),
@@ -1063,6 +1139,7 @@ class _AlertsTabState extends State<_AlertsTab> {
                         );
                       },
                     ),
+                  ),
           ),
         ],
       ),
@@ -1121,13 +1198,17 @@ class _ProfileTab extends StatelessWidget {
                         width: 100,
                         height: 100,
                         decoration: const BoxDecoration(
-                          color: Color(0xFFEDCDB3), // Skin-ish color
+                          color: Color(0xFFDBEAFE),
                           shape: BoxShape.circle,
                         ),
-                        child: const Icon(
-                          Icons.person,
-                          size: 60,
-                          color: Colors.white,
+                        child: ClipOval(
+                          child: (auth.profileImageUrl != null && auth.profileImageUrl!.isNotEmpty)
+                            ? Image.network(
+                                auth.profileImageUrl!,
+                                fit: BoxFit.cover, width: 100, height: 100,
+                                errorBuilder: (_, __, ___) => const Icon(Icons.person_rounded, size: 60, color: Color(0xFF2563EB)),
+                              )
+                            : const Icon(Icons.person_rounded, size: 60, color: Color(0xFF2563EB)),
                         ),
                       ),
                       Positioned(

@@ -55,6 +55,7 @@ class ParkingProvider extends ChangeNotifier {
   int? get assignedTransaksiID => _parkingResult?.transaksiId;
   double? get assignedX => _parkingResult?.xCoord;
   double? get assignedY => _parkingResult?.yCoord;
+  String? get assignedWaktuMasuk => _parkingResult?.waktuMasuk;
   String? get platNomor => _platNomor;
   String? get jenisKendaraan => _jenisKendaraan;
 
@@ -165,7 +166,7 @@ class ParkingProvider extends ChangeNotifier {
 
     try {
       final response = await _apiClient.dio.post(
-        '/api/v1/parking/entry', // Using the /entry endpoint for QR validation
+        '/api/v1/parking/scan', // Using the /scan endpoint for QR validation
         data: {'qr_code': qrCode},
       );
 
@@ -222,13 +223,23 @@ class ParkingProvider extends ChangeNotifier {
         final data = response.data['data'];
         // Clear local active transaction state so user can scan again
         resetScanState();
+        // Auto-reload parking zone data to reflect freed slot (ISSUE 2 compliance)
+        fetchParkingStatus(silent: true);
         return {'success': true, 'data': data};
       }
       return {'success': false, 'message': 'Gagal memproses keluar'};
     } catch (e) {
       String errMsg = 'Terjadi kesalahan jaringan';
       if (e is DioException && e.response != null) {
-        errMsg = e.response!.data['message'] ?? 'Terjadi kesalahan';
+        final respData = e.response!.data;
+        errMsg = respData['message'] ?? 'Terjadi kesalahan';
+        final errCode = respData['error_code'];
+        
+        if (errCode == 'NO_ACTIVE_SESSION' || errMsg.toLowerCase().contains('sudah selesai')) {
+          resetScanState();
+          fetchParkingStatus(silent: true);
+          return {'success': true, 'data': {}};
+        }
       }
       _error = errMsg;
       return {'success': false, 'message': errMsg};
@@ -270,14 +281,16 @@ class ParkingProvider extends ChangeNotifier {
             final payload = data['data'];
             if (payload != null) {
               final idZona = payload['id_zona'].toString();
-              final tersedia = payload['tersedia'] as int;
-              final kapasitas = payload['kapasitas'] as int;
-              final terisi = kapasitas - tersedia;
+              final terpakaiMotor = payload['terpakai_motor'] as int?;
+              final terpakaiMobil = payload['terpakai_mobil'] as int?;
 
               // Temukan zona dan update state secara lokal
               final index = _zones.indexWhere((z) => z.id == idZona);
-              if (index != -1) {
-                _zones[index] = _zones[index].copyWith(terisiSaatIni: terisi);
+              if (index != -1 && terpakaiMotor != null && terpakaiMobil != null) {
+                _zones[index] = _zones[index].copyWith(
+                  terpakaiMotor: terpakaiMotor,
+                  terpakaiMobil: terpakaiMobil,
+                );
                 notifyListeners();
               } else {
                 fetchParkingStatus();
