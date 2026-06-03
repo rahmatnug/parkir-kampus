@@ -52,6 +52,7 @@ func (a *UserHandler) GetProfile(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"status": "success",
 		"user":   user,
+		"role_id": user.RoleID,
 	})
 }
 
@@ -131,6 +132,7 @@ func (a *UserHandler) Login(c *gin.Context) {
 		"message": "Login successful",
 		"token":   token,
 		"user":    user,
+		"role_id": user.RoleID,
 	})
 }
 

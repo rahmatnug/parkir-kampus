@@ -164,9 +164,9 @@ class AuthProvider extends ChangeNotifier {
         return;
       }
       Map<String, dynamic> decodedToken = JwtDecoder.decode(token);
-      // Mendukung key 'id_role' atau 'role_id'
-      _idRole = decodedToken['id_role'] ?? decodedToken['role_id']; 
-      _roleString = decodedToken['role'] ?? '';
+      final idRoleRaw = decodedToken['role_id'] ?? decodedToken['id_role'];
+      _idRole = int.tryParse(idRoleRaw?.toString() ?? '') ?? 3;
+      _roleString = decodedToken['role_name'] ?? decodedToken['role'] ?? '';
       debugPrint("Token decoded successfully. Role ID: $_idRole, Role: $_roleString");
     } catch (e) {
       debugPrint("Error decoding token: $e");

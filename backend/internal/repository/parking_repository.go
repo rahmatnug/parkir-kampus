@@ -24,6 +24,7 @@ func (r *parkingRepository) GetAvailableSlotWithLock(zonaID uint) (*domain.SlotP
 		Strength: "UPDATE",
 		Options:  "SKIP LOCKED",
 	}).Where("id_zona = ? AND status = ?", zonaID, "available").
+		Order("id_slot ASC").
 		First(&slot).Error
 
 	if err != nil {
@@ -151,6 +152,7 @@ func (r *parkingRepository) BookSlotAndCreateTransaction(userID uint, kendaraanI
 			Strength: "UPDATE",
 			Options:  "SKIP LOCKED",
 		}).Where("id_zona = ? AND status = ?", zonaID, "available").
+			Order("id_slot ASC").
 			First(&slot).Error; err != nil {
 			return err // gorm.ErrRecordNotFound if zone is full
 		}

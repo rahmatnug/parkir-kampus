@@ -39,14 +39,16 @@ class _UserHomePageState extends State<UserHomePage> {
   int _selectedTab = 0;
   late PageController _pageController;
   Timer? _pollingTimer;
+  late final ParkingProvider _parkingProvider;
 
   @override
   void initState() {
     super.initState();
+    _parkingProvider = context.read<ParkingProvider>();
     _pageController = PageController();
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (!mounted) return;
-      final provider = context.read<ParkingProvider>();
+      final provider = _parkingProvider;
       final token = await context.read<AuthProvider>().getToken();
       provider.fetchParkingStatus();
       if (token != null) provider.initializeWebSocket(token);
@@ -54,7 +56,7 @@ class _UserHomePageState extends State<UserHomePage> {
 
     _pollingTimer = Timer.periodic(const Duration(seconds: 5), (_) {
       if (mounted) {
-        context.read<ParkingProvider>().fetchParkingStatus(silent: true);
+        _parkingProvider.fetchParkingStatus(silent: true);
       }
     });
   }
@@ -63,7 +65,7 @@ class _UserHomePageState extends State<UserHomePage> {
   void dispose() {
     _pollingTimer?.cancel();
     _pageController.dispose();
-    context.read<ParkingProvider>().disconnectWebSocket();
+    _parkingProvider.disconnectWebSocket();
     super.dispose();
   }
 

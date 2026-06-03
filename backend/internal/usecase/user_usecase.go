@@ -24,20 +24,20 @@ func (u *userUsecase) Register(nama, nim, email, password, platNomor, jenisKenda
 	// Role validation
 	roleName = strings.ToLower(strings.TrimSpace(roleName))
 	var roleID uint
-	if roleName == "mahasiswa" {
-		roleID = 3
-		if !strings.HasSuffix(email, "@mhs.unesa.ac.id") {
-			return nil, errors.New("registrasi mahasiswa wajib menggunakan email kampus @mhs.unesa.ac.id")
+	role, err := u.userRepo.GetRoleByName(roleName)
+	if err != nil {
+		role, _ = u.userRepo.GetRoleByName("mahasiswa")
+		if role == nil {
+			roleID = 3 // ultimate fallback
+		} else {
+			roleID = role.ID
 		}
-	} else if roleName == "dosen" {
-		roleID = 2
-	} else if roleName == "staff" {
-		roleID = 4
-	} else if roleName == "tamu" {
-		roleID = 5
 	} else {
-		// Default fallback
-		roleID = 3
+		roleID = role.ID
+	}
+
+	if roleName == "mahasiswa" && !strings.HasSuffix(email, "@mhs.unesa.ac.id") {
+		return nil, errors.New("registrasi mahasiswa wajib menggunakan email kampus @mhs.unesa.ac.id")
 	}
 
 	existingUser, err := u.userRepo.FindByEmail(email)
@@ -99,7 +99,7 @@ func (u *userUsecase) Login(email, password string) (string, *domain.User, error
 	}
 
 	// Generate JWT token
-	token, err := jwt.GenerateToken(user.ID, user.RoleID)
+	token, err := jwt.GenerateToken(user.ID, user.RoleID, user.Role.NamaRole)
 	if err != nil {
 		return "", nil, err
 	}

@@ -100,8 +100,11 @@ class _QRScanPageState extends State<QRScanPage> with TickerProviderStateMixin {
     } catch (e) {
       if (mounted) {
         // Close any open bottom sheet first
-        if (isSheetOpen && Navigator.of(context).canPop()) {
-          Navigator.of(context).pop();
+        if (isSheetOpen) {
+          if (!mounted) return;
+          if (Navigator.of(context).canPop()) {
+            Navigator.of(context).pop();
+          }
           isSheetOpen = false;
         }
         _showErrorSheet(
@@ -116,8 +119,11 @@ class _QRScanPageState extends State<QRScanPage> with TickerProviderStateMixin {
         });
         // Safely close the processing bottom sheet (it may already be closed)
         try {
-          if (isSheetOpen && Navigator.of(context).canPop()) {
-            Navigator.of(context).pop();
+          if (isSheetOpen) {
+            if (!mounted) return;
+            if (Navigator.of(context).canPop()) {
+              Navigator.of(context).pop();
+            }
             isSheetOpen = false;
           }
         } catch (_) {}
@@ -149,6 +155,7 @@ class _QRScanPageState extends State<QRScanPage> with TickerProviderStateMixin {
       );
     } else if (status == ScanStatus.waitlist) {
       // Waitlist — show info and go back
+      if (!mounted) return;
       _showErrorSheet(
         'Antrian Aktif',
         'Anda masuk waiting list zona ${provider.assignedZone ?? '-'}. Posisi antrian: ${provider.waitlistRank}.',
@@ -159,6 +166,7 @@ class _QRScanPageState extends State<QRScanPage> with TickerProviderStateMixin {
         if (mounted) setState(() => isScanning = true);
       });
     } else if (status == ScanStatus.zoneFull) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text("Kapasitas penuh! Silakan cari zona lain."),
@@ -196,6 +204,7 @@ class _QRScanPageState extends State<QRScanPage> with TickerProviderStateMixin {
           errorColor = const Color(0xFFEF4444);
       }
 
+      if (!mounted) return;
       _showErrorSheet(
         title,
         provider.errorMessage ?? 'Terjadi kesalahan, silakan coba lagi.',

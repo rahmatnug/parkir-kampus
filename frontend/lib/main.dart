@@ -97,13 +97,14 @@ class _AuthGateState extends State<AuthGate> {
     }
 
     if (status == AuthStatus.authenticated) {
-      final idRole = context.watch<AuthProvider>().idRole;
+      final idRole = context.watch<AuthProvider>().idRole ?? 3;
+      final roleString = context.watch<AuthProvider>().roleString?.toLowerCase() ?? '';
       final isBlacklisted = context.watch<AuthProvider>().isBlacklisted;
       final penaltyPoints = context.watch<AuthProvider>().penaltyPoints;
 
-      if (idRole == 1) {
+      if (roleString.contains('admin')) {
         return const DashboardPage();
-      } else if (idRole == 2) {
+      } else if (roleString.contains('petugas')) {
         return const PetugasReportPage();
       } else {
         if (isBlacklisted || penaltyPoints >= 100) {

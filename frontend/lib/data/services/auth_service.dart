@@ -91,7 +91,7 @@ class AuthService {
             await _writeKey('user_riwayat_pelanggaran', jsonEncode(user['riwayat_pelanggaran']), isInStorage);
           }
           
-          if (user['kendaraans'] != null && (user['kendaraans'] as List).isNotEmpty) {
+          if (user['kendaraans'] != null && (user['kendaraans'] as List?)?.isNotEmpty == true) {
             final kendaraan = user['kendaraans'][0];
             await _writeKey('user_id_kendaraan', kendaraan['id_kendaraan']?.toString(), isInStorage);
             await _writeKey('user_plat_nomor', kendaraan['nomor_polisi']?.toString(), isInStorage);
@@ -128,8 +128,13 @@ class AuthService {
             throw Exception('Akun Anda telah diblokir. Hubungi administrator.');
           }
 
+          final roleName = user['role']?['nama_role']?.toString().toLowerCase() ?? '';
           final idRole = user['id_role']?.toString();
-          _activePrefix = (idRole == '1' || idRole == '2') ? 'admin_' : 'user_';
+          if (roleName.isNotEmpty) {
+            _activePrefix = (roleName == 'admin' || roleName == 'petugas') ? 'admin_' : 'user_';
+          } else {
+            _activePrefix = (idRole == '1' || idRole == '6') ? 'admin_' : 'user_';
+          }
 
           await _writeKey(_namaKey, user['nama']?.toString(), rememberMe);
           await _writeKey(_emailKey, user['email']?.toString(), rememberMe);
@@ -144,7 +149,7 @@ class AuthService {
             await _writeKey('user_riwayat_pelanggaran', jsonEncode(user['riwayat_pelanggaran']), rememberMe);
           }
           
-          if (user['kendaraans'] != null && (user['kendaraans'] as List).isNotEmpty) {
+          if (user['kendaraans'] != null && (user['kendaraans'] as List?)?.isNotEmpty == true) {
             final kendaraan = user['kendaraans'][0];
             await _writeKey('user_id_kendaraan', kendaraan['id_kendaraan']?.toString(), rememberMe);
             await _writeKey('user_plat_nomor', kendaraan['nomor_polisi']?.toString(), rememberMe);

@@ -21,18 +21,20 @@ func init() {
 
 // Claims represents the JWT Claims structure
 type Claims struct {
-	IDUser uint   `json:"id_user"`
-	IDRole uint   `json:"id_role"`
+	IDUser   uint   `json:"id_user"`
+	IDRole   uint   `json:"id_role"`
+	RoleName string `json:"role_name"`
 	jwt.RegisteredClaims
 }
 
 // GenerateToken generates a new JWT token with id_user and id_role claims.
 // Token expires in 7 days.
-func GenerateToken(idUser uint, idRole uint) (string, error) {
+func GenerateToken(idUser uint, idRole uint, roleName string) (string, error) {
 	expirationTime := time.Now().Add(7 * 24 * time.Hour)
 	claims := &Claims{
-		IDUser: idUser,
-		IDRole: idRole,
+		IDUser:   idUser,
+		IDRole:   idRole,
+		RoleName: roleName,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(expirationTime),
 		},

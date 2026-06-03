@@ -39,6 +39,7 @@ type UserRepository interface {
 	UpdatePassword(userID uint, newPasswordHash string) error
 	UpdateProfileImageURL(userID uint, imageURL string) error
 	UpdateKendaraan(userID uint, kendaraanID uint, nomorPolisi, jenisKendaraan, warna string) error
+	GetRoleByName(name string) (*Role, error)
 }
 
 // UserUsecase interface defines the standard business logic methods

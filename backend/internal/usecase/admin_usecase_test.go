@@ -46,7 +46,8 @@ func (m *mockAdminRepo) GetBlacklistStats() (*domain.BlacklistStats, error)     
 func (m *mockAdminRepo) GetPendingLaporan() ([]domain.PendingLaporanItem, error)    { return nil, nil }
 func (m *mockAdminRepo) GetLaporanDetail(id uint) (*domain.LaporanDetail, error)    { return nil, nil }
 func (m *mockAdminRepo) ApproveLaporan(laporanID uint, poin int, pelanggaran string) error { return nil }
-func (m *mockAdminRepo) CreateLaporan(laporan *domain.LaporanPetugas) error { return nil }
+func (m *mockAdminRepo) RejectLaporan(laporanID uint) error { return nil }
+func (m *mockAdminRepo) CreateLaporan(laporan *domain.LaporanPetugas, petugasName string) error { return nil }
 func (m *mockAdminRepo) UpdateUserAdmin(userID uint, nama, nim string, roleID uint, status, nomorPolisi, jenisKendaraan string) error { return nil }
 func (m *mockAdminRepo) GetUserByID(userID uint) (*domain.User, error)                                                              { return nil, nil }
 

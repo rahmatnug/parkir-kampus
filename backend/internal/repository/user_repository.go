@@ -25,28 +25,41 @@ func (r *userRepository) Create(user *domain.User) error {
 
 func (r *userRepository) FindByEmail(email string) (*domain.User, error) {
 	var user domain.User
-	err := r.db.Preload("Kendaraans", func(db *gorm.DB) *gorm.DB {
-		return db.Order("created_at DESC")
-	}).Where("email = ? OR nim = ?", email, email).First(&user).Error
+	err := r.db.Preload("Role").Where("email = ? OR nim = ?", email, email).First(&user).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, nil // Or custom error
 		}
 		return nil, err
 	}
+
+	var kendaraan domain.Kendaraan
+	err = r.db.Where("id_user = ?", user.ID).Order("created_at DESC").First(&kendaraan).Error
+	if err == nil {
+		user.Kendaraans = []domain.Kendaraan{kendaraan}
+	} else {
+		user.Kendaraans = []domain.Kendaraan{}
+	}
+
 	return &user, nil
 }
 
 func (r *userRepository) FindByID(id uint) (*domain.User, error) {
 	var user domain.User
-	err := r.db.Preload("Role").Preload("Kendaraans", func(db *gorm.DB) *gorm.DB {
-		return db.Order("created_at DESC")
-	}).First(&user, id).Error
+	err := r.db.Preload("Role").First(&user, id).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, nil // Or custom error
 		}
 		return nil, err
+	}
+
+	var kendaraan domain.Kendaraan
+	err = r.db.Where("id_user = ?", user.ID).Order("created_at DESC").First(&kendaraan).Error
+	if err == nil {
+		user.Kendaraans = []domain.Kendaraan{kendaraan}
+	} else {
+		user.Kendaraans = []domain.Kendaraan{}
 	}
 
 	// Fetch Total Points
@@ -103,3 +116,13 @@ func (r *userRepository) UpdateKendaraan(userID uint, kendaraanID uint, nomorPol
 	}
 	return r.db.Create(&newKendaraan).Error
 }
+
+func (r *userRepository) GetRoleByName(name string) (*domain.Role, error) {
+	var role domain.Role
+	err := r.db.Where("nama_role = ?", name).First(&role).Error
+	if err != nil {
+		return nil, err
+	}
+	return &role, nil
+}
+
