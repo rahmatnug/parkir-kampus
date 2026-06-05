@@ -3,10 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:frontend/presentation/providers/auth_provider.dart';
 import 'package:frontend/presentation/pages/user_auth_page.dart';
-import 'package:frontend/presentation/pages/petugas_report_page.dart';
-import 'package:frontend/presentation/pages/dashboard_page.dart';
-import 'package:frontend/presentation/pages/admin_dashboard_home.dart';
-import 'package:frontend/presentation/pages/user_home_page.dart';
 import 'package:frontend/main.dart';
 
 class LoginPage extends StatefulWidget {
@@ -62,12 +58,20 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
             children: [
               Icon(Icons.error_outline, color: Colors.white, size: 20),
               SizedBox(width: 10),
-              Text('Harap isi email dan password', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w500)),
+              Text(
+                'Harap isi email dan password',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
             ],
           ),
           backgroundColor: const Color(0xFFDC2626),
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
         ),
       );
       return;
@@ -81,7 +85,7 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
       );
       if (success) {
         if (!mounted) return;
-        
+
         Navigator.of(context).pushAndRemoveUntil(
           MaterialPageRoute(builder: (_) => const AuthGate()),
           (Route<dynamic> route) => false,
@@ -391,11 +395,24 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                     Center(
                       child: TextButton.icon(
                         onPressed: () {
-                          Navigator.push(context, MaterialPageRoute(builder: (_) => const UserAuthPage()));
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const UserAuthPage(),
+                            ),
+                          );
                         },
                         icon: const Icon(Icons.school_rounded, size: 16),
-                        label: const Text('Masuk sebagai Mahasiswa', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
-                        style: TextButton.styleFrom(foregroundColor: const Color(0xFF64748B)),
+                        label: const Text(
+                          'Masuk sebagai Mahasiswa',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        style: TextButton.styleFrom(
+                          foregroundColor: const Color(0xFF64748B),
+                        ),
                       ),
                     ),
                     const SizedBox(height: 12),
@@ -421,7 +438,9 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                           onTap: () {
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
-                                content: Text('Dokumentasi ParkirKampus — segera tersedia'),
+                                content: Text(
+                                  'Dokumentasi ParkirKampus — segera tersedia',
+                                ),
                                 behavior: SnackBarBehavior.floating,
                               ),
                             );

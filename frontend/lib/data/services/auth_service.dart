@@ -21,7 +21,7 @@ class AuthService {
     if (value == null) return;
     final actualKey = '$_activePrefix$key';
     final prefs = await SharedPreferences.getInstance();
-    
+
     // Always persist to SharedPreferences to survive F5 on Web
     await prefs.setString(actualKey, value);
     _memoryStorage[actualKey] = value;
@@ -64,40 +64,79 @@ class AuthService {
     if (token == null) return;
 
     try {
-      final response = await http.get(
-        Uri.parse('${AppConfig.baseUrl}/api/user/profile'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-      ).timeout(const Duration(seconds: 10));
+      final response = await http
+          .get(
+            Uri.parse('${AppConfig.baseUrl}/api/user/profile'),
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer $token',
+            },
+          )
+          .timeout(const Duration(seconds: 10));
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         if (data['user'] != null) {
           final user = data['user'];
           final isInStorage = true; // Always save metadata when profile fetched
-          
+
           await _writeKey(_namaKey, user['nama']?.toString(), isInStorage);
           await _writeKey(_emailKey, user['email']?.toString(), isInStorage);
           await _writeKey(_nimKey, user['nim']?.toString(), isInStorage);
           await _writeKey(_roleKey, user['id_role']?.toString(), isInStorage);
-          
-          await _writeKey('user_total_poin', user['total_poin']?.toString(), isInStorage);
-          await _writeKey('user_is_blacklisted', user['is_blacklisted']?.toString(), isInStorage);
-          await _writeKey('user_blacklist_reason', user['blacklist_reason']?.toString(), isInStorage);
-          await _writeKey('user_blacklist_date', user['blacklist_date']?.toString(), isInStorage);
+
+          await _writeKey(
+            'user_total_poin',
+            user['total_poin']?.toString(),
+            isInStorage,
+          );
+          await _writeKey(
+            'user_is_blacklisted',
+            user['is_blacklisted']?.toString(),
+            isInStorage,
+          );
+          await _writeKey(
+            'user_blacklist_reason',
+            user['blacklist_reason']?.toString(),
+            isInStorage,
+          );
+          await _writeKey(
+            'user_blacklist_date',
+            user['blacklist_date']?.toString(),
+            isInStorage,
+          );
           if (user['riwayat_pelanggaran'] != null) {
-            await _writeKey('user_riwayat_pelanggaran', jsonEncode(user['riwayat_pelanggaran']), isInStorage);
+            await _writeKey(
+              'user_riwayat_pelanggaran',
+              jsonEncode(user['riwayat_pelanggaran']),
+              isInStorage,
+            );
           }
-          
-          if (user['kendaraans'] != null && (user['kendaraans'] as List?)?.isNotEmpty == true) {
+
+          if (user['kendaraans'] != null &&
+              (user['kendaraans'] as List?)?.isNotEmpty == true) {
             final kendaraan = user['kendaraans'][0];
-            await _writeKey('user_id_kendaraan', kendaraan['id_kendaraan']?.toString(), isInStorage);
-            await _writeKey('user_plat_nomor', kendaraan['nomor_polisi']?.toString(), isInStorage);
-            await _writeKey('user_jenis_kendaraan', kendaraan['jenis_kendaraan']?.toString(), isInStorage);
+            await _writeKey(
+              'user_id_kendaraan',
+              kendaraan['id_kendaraan']?.toString(),
+              isInStorage,
+            );
+            await _writeKey(
+              'user_plat_nomor',
+              kendaraan['nomor_polisi']?.toString(),
+              isInStorage,
+            );
+            await _writeKey(
+              'user_jenis_kendaraan',
+              kendaraan['jenis_kendaraan']?.toString(),
+              isInStorage,
+            );
           }
-          await _writeKey('user_profile_image_url', user['profile_image_url']?.toString(), isInStorage);
+          await _writeKey(
+            'user_profile_image_url',
+            user['profile_image_url']?.toString(),
+            isInStorage,
+          );
         }
       }
     } catch (e) {
@@ -112,7 +151,7 @@ class AuthService {
         AppConfig.loginEndpoint,
         data: {'email': email, 'password': password},
       );
-      
+
       if (response.statusCode == 200) {
         final data = response.data;
         final token = data['token'] ?? '';
@@ -128,34 +167,76 @@ class AuthService {
             throw Exception('Akun Anda telah diblokir. Hubungi administrator.');
           }
 
-          final roleName = user['role']?['nama_role']?.toString().toLowerCase() ?? '';
+          final roleName =
+              user['role']?['nama_role']?.toString().toLowerCase() ?? '';
           final idRole = user['id_role']?.toString();
           if (roleName.isNotEmpty) {
-            _activePrefix = (roleName == 'admin' || roleName == 'petugas') ? 'admin_' : 'user_';
+            _activePrefix = (roleName == 'admin' || roleName == 'petugas')
+                ? 'admin_'
+                : 'user_';
           } else {
-            _activePrefix = (idRole == '1' || idRole == '6') ? 'admin_' : 'user_';
+            _activePrefix = (idRole == '1' || idRole == '6')
+                ? 'admin_'
+                : 'user_';
           }
 
           await _writeKey(_namaKey, user['nama']?.toString(), rememberMe);
           await _writeKey(_emailKey, user['email']?.toString(), rememberMe);
           await _writeKey(_nimKey, user['nim']?.toString(), rememberMe);
           await _writeKey(_roleKey, idRole, rememberMe);
-          
-          await _writeKey('user_total_poin', user['total_poin']?.toString(), rememberMe);
-          await _writeKey('user_is_blacklisted', user['is_blacklisted']?.toString(), rememberMe);
-          await _writeKey('user_blacklist_reason', user['blacklist_reason']?.toString(), rememberMe);
-          await _writeKey('user_blacklist_date', user['blacklist_date']?.toString(), rememberMe);
+
+          await _writeKey(
+            'user_total_poin',
+            user['total_poin']?.toString(),
+            rememberMe,
+          );
+          await _writeKey(
+            'user_is_blacklisted',
+            user['is_blacklisted']?.toString(),
+            rememberMe,
+          );
+          await _writeKey(
+            'user_blacklist_reason',
+            user['blacklist_reason']?.toString(),
+            rememberMe,
+          );
+          await _writeKey(
+            'user_blacklist_date',
+            user['blacklist_date']?.toString(),
+            rememberMe,
+          );
           if (user['riwayat_pelanggaran'] != null) {
-            await _writeKey('user_riwayat_pelanggaran', jsonEncode(user['riwayat_pelanggaran']), rememberMe);
+            await _writeKey(
+              'user_riwayat_pelanggaran',
+              jsonEncode(user['riwayat_pelanggaran']),
+              rememberMe,
+            );
           }
-          
-          if (user['kendaraans'] != null && (user['kendaraans'] as List?)?.isNotEmpty == true) {
+
+          if (user['kendaraans'] != null &&
+              (user['kendaraans'] as List?)?.isNotEmpty == true) {
             final kendaraan = user['kendaraans'][0];
-            await _writeKey('user_id_kendaraan', kendaraan['id_kendaraan']?.toString(), rememberMe);
-            await _writeKey('user_plat_nomor', kendaraan['nomor_polisi']?.toString(), rememberMe);
-            await _writeKey('user_jenis_kendaraan', kendaraan['jenis_kendaraan']?.toString(), rememberMe);
+            await _writeKey(
+              'user_id_kendaraan',
+              kendaraan['id_kendaraan']?.toString(),
+              rememberMe,
+            );
+            await _writeKey(
+              'user_plat_nomor',
+              kendaraan['nomor_polisi']?.toString(),
+              rememberMe,
+            );
+            await _writeKey(
+              'user_jenis_kendaraan',
+              kendaraan['jenis_kendaraan']?.toString(),
+              rememberMe,
+            );
           }
-          await _writeKey('user_profile_image_url', user['profile_image_url']?.toString(), rememberMe);
+          await _writeKey(
+            'user_profile_image_url',
+            user['profile_image_url']?.toString(),
+            rememberMe,
+          );
         }
         await _writeKey(_tokenKey, token, rememberMe);
         return token;
@@ -163,10 +244,12 @@ class AuthService {
         throw Exception('Login gagal: ${response.statusCode}');
       }
     } on dio_pkg.DioException catch (e) {
-      debugPrint('DioException di login: ${e.message}, response data: ${e.response?.data}');
+      debugPrint(
+        'DioException di login: ${e.message}, response data: ${e.response?.data}',
+      );
       String msg = 'Gagal terhubung ke server';
       final data = e.response?.data;
-      
+
       if (data is Map) {
         msg = data['message'] ?? data['error'] ?? e.message ?? msg;
       } else if (data is String) {
@@ -181,13 +264,23 @@ class AuthService {
       }
       throw Exception(msg);
     } on SocketException {
-      throw Exception('Gagal terhubung ke server. Periksa koneksi internet Anda.');
+      throw Exception(
+        'Gagal terhubung ke server. Periksa koneksi internet Anda.',
+      );
     } on TimeoutException {
       throw Exception('Request timeout. Server tidak merespons.');
     }
   }
 
-  Future<void> register(String nama, String nim, String email, String password, String platNomor, String jenisKendaraan, {String role = ''}) async {
+  Future<void> register(
+    String nama,
+    String nim,
+    String email,
+    String password,
+    String platNomor,
+    String jenisKendaraan, {
+    String role = '',
+  }) async {
     try {
       final body = {
         'nama': nama,
@@ -201,21 +294,20 @@ class AuthService {
         body['role'] = role;
       }
       final d = dio_pkg.Dio();
-      final response = await d.post(
-        AppConfig.registerEndpoint,
-        data: body,
-      );
+      final response = await d.post(AppConfig.registerEndpoint, data: body);
 
       if (response.statusCode == 200 || response.statusCode == 201) {
-        return; 
+        return;
       } else {
         throw Exception('Gagal melakukan registrasi: ${response.statusCode}');
       }
     } on dio_pkg.DioException catch (e) {
-      debugPrint('DioException di register: ${e.message}, response data: ${e.response?.data}');
+      debugPrint(
+        'DioException di register: ${e.message}, response data: ${e.response?.data}',
+      );
       String msg = 'Gagal terhubung ke server';
       final data = e.response?.data;
-      
+
       if (data is Map) {
         msg = data['message'] ?? data['error'] ?? e.message ?? msg;
       } else if (data is String) {
@@ -230,7 +322,9 @@ class AuthService {
       }
       throw Exception(msg);
     } on SocketException {
-      throw Exception('Gagal terhubung ke server. Periksa koneksi internet Anda.');
+      throw Exception(
+        'Gagal terhubung ke server. Periksa koneksi internet Anda.',
+      );
     } on TimeoutException {
       throw Exception('Request timeout. Server tidak merespons.');
     }
@@ -238,16 +332,16 @@ class AuthService {
 
   Future<void> logout() async {
     final prefs = await SharedPreferences.getInstance();
-    
+
     // Clear all keys regardless of current prefix, or specifically based on app logic
-    final keys = await prefs.getKeys();
+    final keys = prefs.getKeys();
     for (String key in keys) {
       if (key.startsWith('admin_') || key.startsWith('user_')) {
         await prefs.remove(key);
       }
     }
     _memoryStorage.clear();
-    _activePrefix = 'user_'; 
+    _activePrefix = 'user_';
   }
 
   Future<Map<String, String?>> getUserData() async {
@@ -269,23 +363,30 @@ class AuthService {
   }
 
   /// Update user profile (vehicle info)
-  Future<void> updateProfile(int idKendaraan, String nomorPolisi, String jenisKendaraan, String warna) async {
+  Future<void> updateProfile(
+    int idKendaraan,
+    String nomorPolisi,
+    String jenisKendaraan,
+    String warna,
+  ) async {
     final token = await getToken();
     if (token == null) throw Exception('Tidak ada token');
 
-    final response = await http.put(
-      Uri.parse('${AppConfig.baseUrl}/api/user/kendaraan'),
-      headers: {
-        'Authorization': 'Bearer $token',
-        'Content-Type': 'application/json',
-      },
-      body: jsonEncode({
-        'id_kendaraan': idKendaraan,
-        'nomor_polisi': nomorPolisi,
-        'jenis_kendaraan': jenisKendaraan,
-        'warna': warna,
-      }),
-    ).timeout(const Duration(seconds: 10));
+    final response = await http
+        .put(
+          Uri.parse('${AppConfig.baseUrl}/api/user/kendaraan'),
+          headers: {
+            'Authorization': 'Bearer $token',
+            'Content-Type': 'application/json',
+          },
+          body: jsonEncode({
+            'id_kendaraan': idKendaraan,
+            'nomor_polisi': nomorPolisi,
+            'jenis_kendaraan': jenisKendaraan,
+            'warna': warna,
+          }),
+        )
+        .timeout(const Duration(seconds: 10));
 
     if (response.statusCode != 200) {
       final body = jsonDecode(response.body);
@@ -305,10 +406,7 @@ class AuthService {
     d.options.receiveTimeout = const Duration(seconds: 15);
 
     final formData = dio_pkg.FormData.fromMap({
-      'avatar': dio_pkg.MultipartFile.fromBytes(
-        bytes,
-        filename: filename,
-      ),
+      'avatar': dio_pkg.MultipartFile.fromBytes(bytes, filename: filename),
     });
 
     final response = await d.post(
@@ -331,4 +429,3 @@ class AuthService {
     return token != null && token.isNotEmpty;
   }
 }
-

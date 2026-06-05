@@ -70,6 +70,19 @@ func (m *mockUserRepo) UpdateKendaraan(userID uint, kendaraanID uint, nomorPolis
 	return nil
 }
 
+func (m *mockUserRepo) GetRoleByName(name string) (*domain.Role, error) {
+	role := &domain.Role{NamaRole: name}
+	switch name {
+	case "mahasiswa":
+		role.ID = 3
+	case "tamu":
+		role.ID = 5
+	default:
+		role.ID = 1
+	}
+	return role, nil
+}
+
 // Test cases
 
 func TestRegisterMahasiswaValidEmail(t *testing.T) {

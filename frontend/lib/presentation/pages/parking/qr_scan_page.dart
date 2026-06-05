@@ -4,7 +4,6 @@ import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:provider/provider.dart';
 import '../../providers/parking_provider.dart';
 import 'parking_assigned_page.dart';
-import 'parking_full_page.dart';
 
 class QRScanPage extends StatefulWidget {
   const QRScanPage({super.key});

@@ -31,11 +31,7 @@ class UserDiblokirPage extends StatelessWidget {
                     color: Colors.red.withOpacity(0.1),
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(
-                    Icons.block,
-                    size: 64,
-                    color: Colors.red,
-                  ),
+                  child: const Icon(Icons.block, size: 64, color: Colors.red),
                 ),
               ),
               const SizedBox(height: 24),
@@ -52,10 +48,7 @@ class UserDiblokirPage extends StatelessWidget {
               const Text(
                 'Akun Anda masuk daftar blacklist karena akumulasi poin pelanggaran telah mencapai batas (100 pts).',
                 textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 16,
-                  color: Colors.black54,
-                ),
+                style: TextStyle(fontSize: 16, color: Colors.black54),
               ),
               const SizedBox(height: 32),
 
@@ -93,7 +86,11 @@ class UserDiblokirPage extends StatelessWidget {
                     SizedBox(width: 8),
                     Text(
                       'Hubungi Admin',
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
                     ),
                   ],
                 ),
@@ -112,7 +109,11 @@ class UserDiblokirPage extends StatelessWidget {
                 ),
                 child: const Text(
                   'Keluar',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black87),
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87,
+                  ),
                 ),
               ),
               const SizedBox(height: 32),
@@ -161,10 +162,7 @@ class UserDiblokirPage extends StatelessWidget {
                     ),
                     const TextSpan(
                       text: '/ 100 pts',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.black54,
-                      ),
+                      style: TextStyle(fontSize: 14, color: Colors.black54),
                     ),
                   ],
                 ),
@@ -285,7 +283,11 @@ class UserDiblokirPage extends StatelessWidget {
                       color: Colors.red.withOpacity(0.1),
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(Icons.warning_amber_rounded, color: Colors.red, size: 20),
+                    child: const Icon(
+                      Icons.warning_amber_rounded,
+                      color: Colors.red,
+                      size: 20,
+                    ),
                   ),
                   const SizedBox(width: 16),
                   Expanded(
@@ -294,11 +296,17 @@ class UserDiblokirPage extends StatelessWidget {
                       children: [
                         Text(
                           pelanggaran,
-                          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 14,
+                          ),
                         ),
                         Text(
                           tgl,
-                          style: const TextStyle(color: Colors.black54, fontSize: 12),
+                          style: const TextStyle(
+                            color: Colors.black54,
+                            fontSize: 12,
+                          ),
                         ),
                       ],
                     ),
@@ -314,7 +322,7 @@ class UserDiblokirPage extends StatelessWidget {
                 ],
               ),
             );
-          }).toList(),
+          }),
         ],
       ),
     );

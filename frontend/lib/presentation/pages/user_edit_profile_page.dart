@@ -1,10 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
-import 'dart:convert';
 import '../providers/auth_provider.dart';
-import '../../core/config/app_config.dart';
 import '../../data/services/auth_service.dart';
 
 class UserEditProfilePage extends StatefulWidget {
@@ -100,18 +97,27 @@ class _UserEditProfilePageState extends State<UserEditProfilePage> {
             mainAxisSize: MainAxisSize.min,
             children: [
               Container(
-                width: 40, height: 4,
+                width: 40,
+                height: 4,
                 decoration: BoxDecoration(
                   color: const Color(0xFFE2E8F0),
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
               const SizedBox(height: 20),
-              const Text('Ubah Foto Profil',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
+              const Text(
+                'Ubah Foto Profil',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF0F172A),
+                ),
+              ),
               const SizedBox(height: 4),
-              const Text('Pilih sumber gambar untuk foto profil Anda.',
-                style: TextStyle(fontSize: 13, color: Color(0xFF64748B))),
+              const Text(
+                'Pilih sumber gambar untuk foto profil Anda.',
+                style: TextStyle(fontSize: 13, color: Color(0xFF64748B)),
+              ),
               const SizedBox(height: 20),
               Row(
                 children: [
@@ -145,10 +151,18 @@ class _UserEditProfilePageState extends State<UserEditProfilePage> {
                   onPressed: () => Navigator.pop(ctx),
                   style: OutlinedButton.styleFrom(
                     side: const BorderSide(color: Color(0xFFE2E8F0)),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
                     padding: const EdgeInsets.symmetric(vertical: 14),
                   ),
-                  child: const Text('Batal', style: TextStyle(color: Color(0xFF0F172A), fontWeight: FontWeight.w600)),
+                  child: const Text(
+                    'Batal',
+                    style: TextStyle(
+                      color: Color(0xFF0F172A),
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                 ),
               ),
             ],
@@ -248,12 +262,30 @@ class _UserEditProfilePageState extends State<UserEditProfilePage> {
                       ),
                       child: ClipOval(
                         child: _isUploadingAvatar
-                          ? const Center(child: CircularProgressIndicator(strokeWidth: 3, color: Color(0xFF2563EB)))
-                          : (auth.profileImageUrl != null && auth.profileImageUrl!.isNotEmpty)
-                            ? Image.network(auth.profileImageUrl!,
-                                fit: BoxFit.cover, width: 100, height: 100,
-                                errorBuilder: (_, __, ___) => const Icon(Icons.person_rounded, size: 60, color: Color(0xFF2563EB)))
-                            : const Icon(Icons.person_rounded, size: 60, color: Color(0xFF2563EB)),
+                            ? const Center(
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 3,
+                                  color: Color(0xFF2563EB),
+                                ),
+                              )
+                            : (auth.profileImageUrl != null &&
+                                  auth.profileImageUrl!.isNotEmpty)
+                            ? Image.network(
+                                auth.profileImageUrl!,
+                                fit: BoxFit.cover,
+                                width: 100,
+                                height: 100,
+                                errorBuilder: (_, __, ___) => const Icon(
+                                  Icons.person_rounded,
+                                  size: 60,
+                                  color: Color(0xFF2563EB),
+                                ),
+                              )
+                            : const Icon(
+                                Icons.person_rounded,
+                                size: 60,
+                                color: Color(0xFF2563EB),
+                              ),
                       ),
                     ),
                     Positioned(
@@ -296,11 +328,19 @@ class _UserEditProfilePageState extends State<UserEditProfilePage> {
             Row(
               children: [
                 Expanded(
-                  child: _buildEditableField('PLAT NOMOR', _platCtrl, 'L 1234 AB'),
+                  child: _buildEditableField(
+                    'PLAT NOMOR',
+                    _platCtrl,
+                    'L 1234 AB',
+                  ),
                 ),
                 const SizedBox(width: 16),
                 Expanded(
-                  child: _buildEditableField('JENIS KENDARAAN', _kendaraanCtrl, 'Motor / Mobil'),
+                  child: _buildEditableField(
+                    'JENIS KENDARAAN',
+                    _kendaraanCtrl,
+                    'Motor / Mobil',
+                  ),
                 ),
               ],
             ),
@@ -313,9 +353,15 @@ class _UserEditProfilePageState extends State<UserEditProfilePage> {
               child: ElevatedButton.icon(
                 onPressed: (_isLoading || !_hasChanges) ? null : _saveProfile,
                 icon: _isLoading
-                  ? const SizedBox(width: 20, height: 20,
-                      child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                  : const Icon(Icons.check_circle, color: Colors.white),
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          color: Colors.white,
+                          strokeWidth: 2,
+                        ),
+                      )
+                    : const Icon(Icons.check_circle, color: Colors.white),
                 label: Text(
                   _isLoading ? 'Menyimpan...' : 'Simpan Perubahan',
                   style: const TextStyle(
@@ -344,8 +390,14 @@ class _UserEditProfilePageState extends State<UserEditProfilePage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label,
-          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF64748B))),
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.bold,
+            color: Color(0xFF64748B),
+          ),
+        ),
         const SizedBox(height: 8),
         Container(
           width: double.infinity,
@@ -358,10 +410,19 @@ class _UserEditProfilePageState extends State<UserEditProfilePage> {
           child: Row(
             children: [
               Expanded(
-                child: Text(value,
-                  style: const TextStyle(fontSize: 16, color: Color(0xFF64748B))),
+                child: Text(
+                  value,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    color: Color(0xFF64748B),
+                  ),
+                ),
               ),
-              const Icon(Icons.lock_outline_rounded, size: 16, color: Color(0xFFCBD5E1)),
+              const Icon(
+                Icons.lock_outline_rounded,
+                size: 16,
+                color: Color(0xFFCBD5E1),
+              ),
             ],
           ),
         ),
@@ -369,12 +430,22 @@ class _UserEditProfilePageState extends State<UserEditProfilePage> {
     );
   }
 
-  Widget _buildEditableField(String label, TextEditingController ctrl, String hint) {
+  Widget _buildEditableField(
+    String label,
+    TextEditingController ctrl,
+    String hint,
+  ) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label,
-          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF64748B))),
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.bold,
+            color: Color(0xFF64748B),
+          ),
+        ),
         const SizedBox(height: 8),
         TextFormField(
           controller: ctrl,
@@ -382,16 +453,25 @@ class _UserEditProfilePageState extends State<UserEditProfilePage> {
           decoration: InputDecoration(
             hintText: hint,
             hintStyle: const TextStyle(color: Color(0xFFCBD5E1), fontSize: 14),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 16,
+            ),
             filled: true,
             fillColor: Colors.white,
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: Color(0xFFE2E8F0), width: 1.5),
+              borderSide: const BorderSide(
+                color: Color(0xFFE2E8F0),
+                width: 1.5,
+              ),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: Color(0xFF2563EB), width: 1.5),
+              borderSide: const BorderSide(
+                color: Color(0xFF2563EB),
+                width: 1.5,
+              ),
             ),
           ),
         ),
@@ -405,7 +485,11 @@ class _PhotoOptionCard extends StatelessWidget {
   final IconData icon;
   final String label;
   final VoidCallback onTap;
-  const _PhotoOptionCard({required this.icon, required this.label, required this.onTap});
+  const _PhotoOptionCard({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -422,8 +506,14 @@ class _PhotoOptionCard extends StatelessWidget {
           children: [
             Icon(icon, size: 32, color: const Color(0xFF2563EB)),
             const SizedBox(height: 8),
-            Text(label,
-              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF0F172A))),
+            Text(
+              label,
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: Color(0xFF0F172A),
+              ),
+            ),
           ],
         ),
       ),
